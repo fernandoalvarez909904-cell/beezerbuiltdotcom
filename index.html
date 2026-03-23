@@ -159,7 +159,7 @@
         <div style="background:rgba(16,185,129,0.08);padding:14px;border-radius:12px;font-size:0.85em;line-height:1.5;">
             <div id="twilioStatusDisplay"><span class="status-dot"></span>Connecting to Server...</div>
             <br>
-            10 numbers per agent • Automatic 10-bucket assignment<br>
+            5 active numbers • Automatic round-robin assignment<br>
             Round-robin queues active • Exact 1,000-lead cycle<br>
             <small>App SID: APe183b25ac1f6be1e3fe5a8640be3b109</small>
         </div>
@@ -283,26 +283,27 @@
 
 <script>
     const TOKEN_URL = 'https://dialer-1641.twil.io/token';
+
+    // 5 active numbers — add more when ready
     const TWILIO_NUMBERS = [
-        '+18129010600', // active
-        '+10000000001', // placeholder
-        '+10000000002', // placeholder
-        '+10000000003', // placeholder
-        '+10000000004', // placeholder
-        '+10000000005', // placeholder
-        '+10000000006', // placeholder
-        '+10000000007', // placeholder
-        '+10000000008', // placeholder
-        '+10000000009'  // placeholder
+        '+18129010600',
+        '+13252080883',
+        '+13252080358',
+        '+13256665731',
+        '+13256665490'
     ];
+
+    const ACTIVE_NUMBER_COUNT = TWILIO_NUMBERS.length;
 
     const KEY_LEADS = 'leads_v4_system';
     const KEY_QUEUE = 'active_call_queue';
     const KEY_INDEX = 'active_queue_index';
+    const KEY_ROUND_ROBIN = 'round_robin_index';
 
     let leads = JSON.parse(localStorage.getItem(KEY_LEADS)) || [];
     let callQueue = JSON.parse(localStorage.getItem(KEY_QUEUE)) || [];
     let queueIndex = parseInt(localStorage.getItem(KEY_INDEX)) || 0;
+    let roundRobinIndex = parseInt(localStorage.getItem(KEY_ROUND_ROBIN)) || 0;
     let currentPage = 1;
     const leadsPerPage = 20;
     let currentProfileId = null;
@@ -311,6 +312,13 @@
     let sortDir = 1;
     let device = null;
     let activeCall = null;
+
+    function getNextTwilioNumber() {
+        const num = TWILIO_NUMBERS[roundRobinIndex % ACTIVE_NUMBER_COUNT];
+        roundRobinIndex++;
+        localStorage.setItem(KEY_ROUND_ROBIN, String(roundRobinIndex));
+        return num;
+    }
 
     window.onload = () => {
         document.getElementById('dateLabel').innerText = luxon.DateTime.now().toLocaleString(luxon.DateTime.DATE_HUGE);
@@ -378,6 +386,7 @@
     function openDialerModal() {
         const current = callQueue[queueIndex];
         if (!current) return stopQueue();
+        const callerNum = current.twilioNumber || TWILIO_NUMBERS[0];
         document.getElementById('dialerProgress').textContent = `LEAD ${queueIndex + 1} OF ${callQueue.length}`;
         document.getElementById('dialerName').textContent = current.name;
         document.getElementById('dialerTime').textContent = getLocalTimeForLead(current.phone);
@@ -385,7 +394,7 @@
         document.getElementById('dialerResort').textContent = current.resort || 'Batch';
         document.getElementById('dialerCalls').textContent = (current.calls || 0) + ' Calls';
         document.getElementById('dialerPhone').textContent = formatPhone(current.phone);
-        document.getElementById('twilioCallerId').textContent = formatPhone(TWILIO_NUMBERS[0]);
+        document.getElementById('twilioCallerId').textContent = formatPhone(callerNum);
         document.getElementById('dialerNotes').value = '';
         resetDialButton();
         document.getElementById('dialerModal').style.display = 'block';
@@ -394,12 +403,13 @@
     async function placeTwilioCallNow() {
         if (!device) return alert('Twilio device not connected. Check the token URL.');
         const current = callQueue[queueIndex];
+        const callerNum = current.twilioNumber || TWILIO_NUMBERS[0];
         const btn = document.getElementById('mainDialButton');
         btn.disabled = true;
         btn.innerText = '⏳ CONNECTING...';
         try {
             activeCall = await device.connect({
-                params: { To: current.phone, From: TWILIO_NUMBERS[0] }
+                params: { To: current.phone, From: callerNum }
             });
             activeCall.on('disconnect', resetDialButton);
             activeCall.on('cancel', resetDialButton);
@@ -523,6 +533,7 @@
         window.tempData.forEach((row) => {
             const ph = String(row[pC] || '').replace(/\D/g, '');
             if (!ph || leads.some(l => l.phone === ph)) return;
+            const bucket = added % ACTIVE_NUMBER_COUNT;
             leads.push({
                 id: 'L-' + Math.random().toString(36).substr(2, 9),
                 name: row[nC] || 'Unknown',
@@ -535,8 +546,8 @@
                 notes: notesC ? (row[notesC] || '') : '',
                 hidden: false,
                 disposition: '',
-                bucket: 0,
-                twilioNumber: TWILIO_NUMBERS[0],
+                bucket: bucket,
+                twilioNumber: TWILIO_NUMBERS[bucket],
                 lastCalledDate: null
             });
             added++;
@@ -599,7 +610,7 @@
         document.getElementById('profileEmail').value = l.email || '';
         document.getElementById('profileAppt').value = l.appointment || '';
         document.getElementById('profileNotes').value = l.notes || '';
-        document.getElementById('profileTwilioNumber').textContent = formatPhone(TWILIO_NUMBERS[0]);
+        document.getElementById('profileTwilioNumber').textContent = formatPhone(l.twilioNumber || TWILIO_NUMBERS[0]);
         document.getElementById('emailOutputs').innerHTML = '';
         document.querySelectorAll('input[name="emailTemplate"]').forEach(c => c.checked = false);
         document.getElementById('profileModal').style.display = 'block';
@@ -703,7 +714,7 @@
     }
 
     function exportWeeklyRecap() {
-        const data = leads.map(l => ({ Name:l.name, Phone:formatPhone(l.phone), Resort:l.resort, City:l.city, Calls:l.calls||0, Disposition:l.disposition||'', LastCalled:l.lastCalledDate||'', Appointment:l.appointment||'', Notes:l.notes||'' }));
+        const data = leads.map(l => ({ Name:l.name, Phone:formatPhone(l.phone), Resort:l.resort, City:l.city, Calls:l.calls||0, Disposition:l.disposition||'', LastCalled:l.lastCalledDate||'', Appointment:l.appointment||'', TwilioNumber:l.twilioNumber||'', Notes:l.notes||'' }));
         exportToExcel(data, `weekly_recap_${luxon.DateTime.now().toISODate()}.xlsx`);
     }
 
