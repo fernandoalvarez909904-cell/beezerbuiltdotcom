@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Workflow — Lead Organizer Pro (Twilio 10-Number Edition)</title>
+    <title>Workflow — Lead Organizer Pro (Twilio Edition)</title>
     <script src="https://cdn.jsdelivr.net/npm/@twilio/voice-sdk@2.3.0/dist/twilio.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
@@ -77,20 +77,36 @@
         .call-timer { font-size:1.4em; font-weight:700; color:#10b981; text-align:center; margin:8px 0; font-family:monospace; }
         .callback-alert { background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.4); border-radius:10px; padding:10px 14px; margin-bottom:8px; font-size:0.82em; cursor:pointer; }
         .callback-alert:hover { background:rgba(16,185,129,0.2); }
+        /* Draggable dialer */
+        #dialerModal { background:transparent !important; pointer-events:none; }
+        #dialerModal .modal-content { pointer-events:all; position:fixed; top:5vh; left:50%; transform:translateX(-50%); margin:0; max-height:92vh; }
+        #dialerDragHandle { background:linear-gradient(135deg,#007bff,#63b3ed); color:white; padding:8px 16px; border-radius:12px 12px 0 0; margin:-32px -32px 16px -32px; cursor:grab; user-select:none; font-size:0.8em; font-weight:600; display:flex; align-items:center; justify-content:space-between; }
+        #dialerDragHandle:active { cursor:grabbing; }
+        /* Recording button */
+        .btn-record { padding:8px 14px; border-radius:8px; font-weight:600; cursor:pointer; border:none; background:linear-gradient(135deg,#dc3545,#c53030); color:white; display:flex; align-items:center; gap:6px; }
+        .btn-record.recording { background:linear-gradient(135deg,#991b1b,#7f1d1d); animation:pulse-red 1s infinite; }
+        @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:0.7} }
+        .recording-entry { background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:10px; margin-bottom:8px; font-size:0.82em; display:flex; align-items:center; gap:8px; }
+        .recording-entry audio { flex:1; height:32px; }
+        /* Audio test */
+        .audio-tip { background:rgba(0,123,255,0.06); border-left:3px solid var(--primary); padding:10px 14px; border-radius:0 8px 8px 0; margin-bottom:10px; font-size:0.85em; line-height:1.6; }
+        .audio-tip.warn { border-left-color:#f6ad55; background:rgba(246,173,85,0.08); }
+        .audio-tip.good { border-left-color:#10b981; background:rgba(16,185,129,0.08); }
+        /* Smart queue badge */
+        .smart-count { background:rgba(255,255,255,0.3); border-radius:6px; padding:2px 7px; font-size:0.8em; font-weight:700; margin-left:6px; }
     </style>
 </head>
 <body data-theme="light">
 
 <div id="main">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-            <h1>Workflow — Twilio 10-Number Edition</h1>
-            <button onclick="startQueue()" class="icon-btn" style="background:var(--primary);color:white;width:auto;padding:0 15px;gap:8px;font-size:0.9em;border:none;">🔀 Start Call Queue (Round-Robin)</button>
-            <button onclick="startFullQueue()" class="icon-btn" style="background:var(--warning);color:white;width:auto;padding:0 15px;gap:8px;font-size:0.9em;border:none;">🔄 Force Full Queue</button>
-            <button onclick="openCustomQueueModal()" class="icon-btn" style="background:#6b46c1;color:white;width:auto;padding:0 15px;gap:8px;font-size:0.9em;border:none;">🛠️ Custom Queue</button>
-            <label style="margin-left:10px;font-size:0.9em;color:#666;display:flex;align-items:center;gap:6px;">
-                <input type="checkbox" id="onlyFreshToday" checked style="width:auto;padding:0;margin:0;"> Only uncalled today
-            </label>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h1>Workflow — Twilio Edition</h1>
+            <button onclick="startQueue()" class="icon-btn" style="background:var(--primary);color:white;width:auto;padding:0 15px;gap:8px;font-size:0.9em;border:none;">🔀 Start Call Queue</button>
+            <button onclick="startSmartQueue()" class="icon-btn" id="smartQueueBtn" style="background:#10b981;color:white;width:auto;padding:0 15px;gap:8px;font-size:0.9em;border:none;">🕐 Smart Queue <span id="smartQueueCount" class="smart-count">0</span></button>
+            <button onclick="openAddLeadModal()" class="icon-btn" style="background:#6b46c1;color:white;width:auto;padding:0 15px;gap:8px;font-size:0.9em;border:none;">➕ Add Lead</button>
+            <button onclick="openManualDialModal()" class="icon-btn" style="background:#ed8936;color:white;width:auto;padding:0 15px;gap:8px;font-size:0.9em;border:none;">📞 Manual Dial</button>
+            <button onclick="openAudioTestModal()" class="icon-btn" style="background:#718096;color:white;width:auto;padding:0 15px;gap:8px;font-size:0.9em;border:none;">🎙️ Audio Test</button>
         </div>
         <button onclick="toggleTheme()" id="themeBtn" style="width:50px;height:50px;border-radius:50%;border:1px solid var(--border-color);font-size:1.5em;background:var(--bg-panel);cursor:pointer;">🌞</button>
     </div>
@@ -129,7 +145,6 @@
                 <button class="icon-btn" style="background:var(--primary);color:white;border:none;">📥</button>
                 <input type="file" id="fileInput" accept=".csv,.xls,.xlsx" style="position:absolute;left:0;top:0;opacity:0;width:100%;height:100%;cursor:pointer;" />
             </div>
-            <button onclick="toggleShowHidden()" class="icon-btn" title="Toggle hidden">👁</button>
         </div>
     </div>
 
@@ -156,6 +171,7 @@
     </div>
 </div>
 
+<!-- ─── SIDEBAR ─────────────────────────────────────────────────────────── -->
 <div id="sidebar">
     <div style="text-align:center;margin-bottom:20px;">
         <div id="clock" style="font-size:1.8em;font-weight:bold;color:var(--primary);">00:00:00</div>
@@ -181,19 +197,19 @@
         <div id="callLogList" style="max-height:300px;overflow-y:auto;"></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:15px;">
-        <button onclick="exportWeeklyRecap()" style="padding:12px;background:var(--success);color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;">Download Weekly Recap</button>
-        <button onclick="exportNoConnectOnly()" style="padding:12px;background:var(--warning);color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;">Export No-Connect Only</button>
-        <button onclick="exportCarryOverLeads()" style="padding:12px;background:#10b981;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;">Export Carry-Over</button>
-        <button onclick="resetHiddenLeads()" style="padding:8px;font-size:0.8em;background:var(--warning);color:white;border:none;border-radius:8px;cursor:pointer;">Reset Hidden (New Day)</button>
-        <button onclick="deleteAllLeads()" style="padding:8px;background:var(--danger);color:white;border:none;border-radius:8px;opacity:0.5;font-size:0.7em;cursor:pointer;">Clear Workspace</button>
+        <button onclick="exportAnsweredLeads()" style="padding:12px;background:var(--success);color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;">📤 Export Answered Leads</button>
+        <button onclick="deleteAllLeads()" style="padding:8px;background:var(--danger);color:white;border:none;border-radius:8px;opacity:0.6;font-size:0.8em;cursor:pointer;">🗑️ Clear Workspace (Delete All)</button>
     </div>
 </div>
 
-<!-- DIALER MODAL -->
+<!-- ─── DIALER MODAL (DRAGGABLE) ─────────────────────────────────────────── -->
 <div id="dialerModal" class="modal-overlay">
-    <div class="modal-content" style="max-width:500px;">
+    <div class="modal-content" style="max-width:500px;" id="dialerModalContent">
+        <div id="dialerDragHandle">
+            <span>☰ Drag to move</span>
+            <span id="dialerProgress" style="font-size:0.9em;">LEAD 1 OF 100</span>
+        </div>
         <div style="text-align:center;">
-            <div id="dialerProgress" style="font-size:0.8em;color:var(--primary);font-weight:bold;margin-bottom:10px;">LEAD 1 OF 100</div>
             <div id="dialerName" class="dialer-name" onclick="openProfileFromDialer()">John Doe</div>
             <div id="dialerTime" style="font-size:1.2em;font-weight:600;color:var(--warning);margin-bottom:8px;"></div>
             <div id="callTimerDisplay" class="call-timer" style="display:none;">00:00</div>
@@ -211,9 +227,16 @@
                 <select id="callerIdSelect" onchange="onCallerIdSelectChange()" style="margin-bottom:0;"></select>
             </div>
             <div id="dialerPhone" style="font-size:1.4em;margin-bottom:12px;letter-spacing:1.5px;"></div>
-            <button id="mainDialButton" onclick="placeTwilioCallNow()" style="width:100%;margin-bottom:12px;padding:12px;background:linear-gradient(135deg,#10b981,#34d399);color:white;border:none;border-radius:8px;font-weight:700;font-size:1.05em;cursor:pointer;">
-                📲 DIAL WITH ASSIGNED TWILIO NUMBER
-            </button>
+
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+                <button id="mainDialButton" onclick="placeTwilioCallNow()" style="flex:1;padding:12px;background:linear-gradient(135deg,#10b981,#34d399);color:white;border:none;border-radius:8px;font-weight:700;font-size:1.05em;cursor:pointer;">
+                    📲 DIAL WITH ASSIGNED TWILIO NUMBER
+                </button>
+                <button id="recordBtn" onclick="toggleRecording()" class="btn-record" title="Record this call (saves locally to this lead)">
+                    🔴 Record
+                </button>
+            </div>
+            <div id="recordingStatus" style="display:none;font-size:0.8em;color:#dc3545;font-weight:600;margin-bottom:8px;text-align:left;">⏺ Recording... (will save to lead when you stop)</div>
 
             <!-- DTMF KEYPAD -->
             <div id="dtmfSection" style="display:none;margin-bottom:12px;border:1px solid var(--border-color);border-radius:12px;padding:12px;">
@@ -267,11 +290,21 @@
     </div>
 </div>
 
-<!-- PROFILE MODAL -->
+<!-- ─── PROFILE MODAL ─────────────────────────────────────────────────────── -->
 <div id="profileModal" class="modal-overlay">
     <div class="modal-content">
         <h2 id="profileName"></h2>
-        <div id="profilePhone" style="font-size:1.35em;font-family:monospace;margin-bottom:16px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+            <div>
+                <label>Edit Name</label>
+                <input type="text" id="profileNameEdit" style="margin-bottom:0;" />
+            </div>
+            <div>
+                <label>Edit Phone</label>
+                <input type="text" id="profilePhoneEdit" style="margin-bottom:0;" />
+            </div>
+        </div>
+        <div id="profilePhone" style="font-size:1.35em;font-family:monospace;margin-bottom:10px;"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
             <div><strong>City:</strong> <span id="profileCity"></span></div>
             <div><strong>Resort:</strong> <span id="profileResort"></span></div>
@@ -317,14 +350,27 @@
             <button onclick="scheduleCallbackFromProfile()" style="width:100%;padding:8px;background:linear-gradient(135deg,#10b981,#34d399);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Set Callback Reminder</button>
         </div>
 
-        <h2 style="margin:24px 0 12px;font-size:1.1em;">Email Templates</h2>
-        <div style="margin-bottom:16px;font-size:0.9em;">
+        <!-- RECORDINGS -->
+        <div style="margin-bottom:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <h2 style="margin:0;border:none;padding:0;font-size:1em;">🎙️ Call Recordings</h2>
+                <small style="color:#718096;font-size:0.78em;">Saved locally on your device</small>
+            </div>
+            <div id="profileRecordings"><div style="font-size:0.8em;color:#718096;">No recordings for this lead.</div></div>
+        </div>
+
+        <h2 style="margin:12px 0;font-size:1.1em;">Email Templates</h2>
+        <div style="margin-bottom:8px;font-size:0.9em;">
             <label style="display:block;margin:8px 0;text-transform:none;"><input type="checkbox" name="emailTemplate" value="inquiry" style="width:auto;padding:0;margin-right:6px;"> Initial Inquiry</label>
             <label style="display:block;margin:8px 0;text-transform:none;"><input type="checkbox" name="emailTemplate" value="thankyou_quick" style="width:auto;padding:0;margin-right:6px;"> Thank You - Quick Response</label>
             <label style="display:block;margin:8px 0;text-transform:none;"><input type="checkbox" name="emailTemplate" value="followup_long" style="width:auto;padding:0;margin-right:6px;"> Follow-Up - Long Delay</label>
         </div>
-        <button onclick="generateEmailTemplates()" class="btn-primary" style="margin-bottom:20px;width:100%;">Generate to Notepad</button>
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <button onclick="generateEmailTemplates()" class="btn-primary" style="flex:1;">Generate to Notepad</button>
+            <button onclick="openEditTemplatesModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border-color);background:none;font-weight:600;cursor:pointer;">✏️ Edit Templates</button>
+        </div>
         <div id="emailOutputs" style="margin-bottom:24px;"></div>
+
         <label>Full Notes / History</label>
         <textarea id="profileNotes" style="height:120px;"></textarea>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -334,25 +380,7 @@
     </div>
 </div>
 
-<!-- CUSTOM QUEUE MODAL -->
-<div id="customQueueModal" class="modal-overlay">
-    <div class="modal-content" style="max-width:400px;">
-        <h2>🛠️ Custom Queue Builder</h2>
-        <label>Select Resort</label>
-        <select id="customResortSelect"></select>
-        <label>Max Leads to Queue</label>
-        <input type="number" id="customQueueMax" value="50">
-        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.9em;">
-            <input type="checkbox" id="customOnlyFresh" checked style="width:auto;padding:0;margin:0;"> Only uncalled today
-        </label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;">
-            <button onclick="buildCustomQueue()" class="btn-primary">Generate Queue</button>
-            <button onclick="closeModal('customQueueModal')" style="background:none;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;">Cancel</button>
-        </div>
-    </div>
-</div>
-
-<!-- EXCEL MAP MODAL -->
+<!-- ─── EXCEL MAP MODAL ───────────────────────────────────────────────────── -->
 <div id="excelMapModal" class="modal-overlay">
     <div class="modal-content">
         <h2>Map Your Columns</h2>
@@ -372,7 +400,126 @@
     </div>
 </div>
 
+<!-- ─── ADD LEAD MODAL ───────────────────────────────────────────────────── -->
+<div id="addLeadModal" class="modal-overlay">
+    <div class="modal-content" style="max-width:440px;">
+        <h2>➕ Add Single Lead</h2>
+        <label>Full Name *</label><input type="text" id="addLeadName" placeholder="John Smith">
+        <label>Phone Number *</label><input type="text" id="addLeadPhone" placeholder="(555) 123-4567">
+        <label>Email</label><input type="email" id="addLeadEmail" placeholder="john@email.com">
+        <label>Resort</label><input type="text" id="addLeadResort" placeholder="e.g. Marriott Vacation Club">
+        <label>City</label><input type="text" id="addLeadCity" placeholder="Leave blank to auto-detect from area code">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+            <button onclick="saveAddLead()" class="btn-primary">Add Lead</button>
+            <button onclick="closeModal('addLeadModal')" style="background:none;border:1px solid var(--border-color);border-radius:8px;font-weight:bold;cursor:pointer;">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ─── MANUAL DIAL MODAL ────────────────────────────────────────────────── -->
+<div id="manualDialModal" class="modal-overlay">
+    <div class="modal-content" style="max-width:400px;">
+        <h2>📞 Manual Dial</h2>
+        <p style="font-size:0.85em;color:#718096;margin-bottom:16px;">Type any phone number and choose which of your 5 numbers to call from. This call is one-off and won't be added to the queue.</p>
+        <label>Phone Number to Call</label>
+        <input type="text" id="manualDialNumber" placeholder="(555) 123-4567">
+        <label>Call From (Your Caller ID)</label>
+        <select id="manualCallerIdSelect" style="margin-bottom:16px;"></select>
+        <button id="manualDialBtn" onclick="placeManualCall()" style="width:100%;padding:12px;background:linear-gradient(135deg,#10b981,#34d399);color:white;border:none;border-radius:8px;font-weight:700;font-size:1.05em;cursor:pointer;">📲 DIAL NOW</button>
+        <div id="manualCallStatus" style="display:none;margin-top:12px;padding:10px;background:rgba(16,185,129,0.08);border-radius:8px;text-align:center;">
+            <div id="manualCallTimer" class="call-timer">00:00</div>
+            <span style="font-weight:600;color:#10b981;">Call Connected</span>
+            <button onclick="hangUpManual()" style="margin-left:12px;padding:5px 12px;background:var(--danger);color:white;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">🛑 Hang Up</button>
+        </div>
+        <button onclick="closeManualDial()" style="width:100%;margin-top:12px;padding:10px;border-radius:8px;font-weight:bold;border:1px solid var(--border-color);background:none;cursor:pointer;">Close</button>
+    </div>
+</div>
+
+<!-- ─── AUDIO TEST MODAL ──────────────────────────────────────────────────── -->
+<div id="audioTestModal" class="modal-overlay">
+    <div class="modal-content" style="max-width:480px;">
+        <h2>🎙️ Audio Quality Test</h2>
+        <p style="font-size:0.85em;color:#718096;margin-bottom:16px;">Run this before you start calling. It tests your microphone and gives you easy steps to fix any issues — no tech knowledge needed.</p>
+        <div id="audioTestStatus" style="text-align:center;padding:20px;border:2px dashed var(--border-color);border-radius:12px;margin-bottom:16px;">
+            <div style="font-size:2em;margin-bottom:8px;">🎙️</div>
+            <div id="audioTestMsg" style="font-size:0.9em;font-weight:600;">Click "Start Test" to check your audio</div>
+            <div id="audioTestBar" style="margin-top:12px;display:none;">
+                <div style="font-size:0.75em;color:#718096;margin-bottom:4px;">Mic Level</div>
+                <div style="height:12px;background:rgba(226,232,240,0.5);border-radius:999px;overflow:hidden;">
+                    <div id="audioLevelFill" style="height:100%;width:0%;background:linear-gradient(135deg,#10b981,#34d399);transition:width 0.1s;"></div>
+                </div>
+            </div>
+        </div>
+        <div id="audioTestResults" style="display:none;">
+            <div id="audioResultCards"></div>
+            <div style="margin-top:12px;">
+                <label style="text-transform:none;font-size:0.85em;font-weight:600;color:var(--primary);">🔧 Codec Setting (Internet Quality Adjustment)</label>
+                <p style="font-size:0.8em;color:#718096;margin-bottom:8px;">If your call sounds choppy or delayed, switching to Standard Mode uses less internet and often sounds better on slower connections.</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <button onclick="setCodec('opus')" id="codecOpusBtn" style="padding:10px;border-radius:8px;border:2px solid var(--primary);font-weight:600;cursor:pointer;background:rgba(0,123,255,0.1);color:var(--primary);">HD Mode (Opus)<br><small style="font-weight:400;">Best quality — fast internet</small></button>
+                    <button onclick="setCodec('pcmu')" id="codecPcmuBtn" style="padding:10px;border-radius:8px;border:2px solid var(--border-color);font-weight:600;cursor:pointer;background:none;color:var(--text-main);">Standard Mode (PCMU)<br><small style="font-weight:400;">Lower bandwidth — slower internet</small></button>
+                </div>
+            </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+            <button id="audioTestStartBtn" onclick="startAudioTest()" style="flex:1;padding:12px;background:linear-gradient(135deg,#007bff,#63b3ed);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;">▶ Start Test (5 sec)</button>
+            <button onclick="closeModal('audioTestModal')" style="flex:1;padding:10px;border-radius:8px;font-weight:bold;border:1px solid var(--border-color);background:none;cursor:pointer;">Done</button>
+        </div>
+    </div>
+</div>
+
+<!-- ─── EDIT TEMPLATES MODAL ─────────────────────────────────────────────── -->
+<div id="editTemplatesModal" class="modal-overlay">
+    <div class="modal-content" style="max-width:560px;">
+        <h2>✏️ Edit Email Templates</h2>
+        <p style="font-size:0.85em;color:#718096;margin-bottom:16px;">Customize your email templates once and they'll be saved forever. When you generate an email, it automatically fills in the client's last name and resort. Available placeholders: <code>{firstName}</code>, <code>{lastName}</code>, <code>{resort}</code></p>
+
+        <div style="background:rgba(0,123,255,0.06);border-radius:12px;padding:14px;margin-bottom:20px;">
+            <div style="font-size:0.8em;font-weight:700;color:var(--primary);margin-bottom:10px;text-transform:uppercase;">Your Signature Info (saved once)</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div><label style="font-size:0.7em;">Your Name</label><input type="text" id="sigName" placeholder="e.g. Carlos Rodriguez" style="margin-bottom:0;"></div>
+                <div><label style="font-size:0.7em;">Your Title</label><input type="text" id="sigTitle" placeholder="e.g. Vacation Consultant" style="margin-bottom:0;"></div>
+                <div><label style="font-size:0.7em;">Your Phone</label><input type="text" id="sigPhone" placeholder="e.g. (812) 901-0600" style="margin-bottom:0;"></div>
+                <div><label style="font-size:0.7em;">Your Extension</label><input type="text" id="sigExt" placeholder="e.g. 205" style="margin-bottom:0;"></div>
+            </div>
+        </div>
+
+        <label>Initial Inquiry Template</label>
+        <textarea id="tplInquiry" style="height:120px;font-size:0.82em;"></textarea>
+
+        <label>Thank You - Quick Response Template</label>
+        <textarea id="tplThankyou" style="height:120px;font-size:0.82em;"></textarea>
+
+        <label>Follow-Up - Long Delay Template</label>
+        <textarea id="tplFollowup" style="height:120px;font-size:0.82em;"></textarea>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+            <button onclick="saveEmailTemplates()" class="btn-primary">💾 Save Templates</button>
+            <button onclick="closeModal('editTemplatesModal')" style="background:none;border:1px solid var(--border-color);border-radius:8px;font-weight:bold;cursor:pointer;">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ─── CUSTOM QUEUE MODAL (kept for internal use) ───────────────────────── -->
+<div id="customQueueModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width:400px;">
+        <h2>🛠️ Custom Queue Builder</h2>
+        <label>Select Resort</label>
+        <select id="customResortSelect"></select>
+        <label>Max Leads to Queue</label>
+        <input type="number" id="customQueueMax" value="50">
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.9em;">
+            <input type="checkbox" id="customOnlyFresh" checked style="width:auto;padding:0;margin:0;"> Only uncalled today
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;">
+            <button onclick="buildCustomQueue()" class="btn-primary">Generate Queue</button>
+            <button onclick="closeModal('customQueueModal')" style="background:none;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <script>
+    // ── CONSTANTS ─────────────────────────────────────────────────────────
     const TOKEN_URL = 'https://dialer-1641.twil.io/token';
     const TWILIO_NUMBERS = [
         '+18129010600',
@@ -382,52 +529,115 @@
         '+13256665490'
     ];
     const ACTIVE_NUMBER_COUNT = TWILIO_NUMBERS.length;
-    const KEY_LEADS = 'leads_v4_system';
-    const KEY_QUEUE = 'active_call_queue';
-    const KEY_INDEX = 'active_queue_index';
+    const KEY_LEADS       = 'leads_v4_system';
+    const KEY_QUEUE       = 'active_call_queue';
+    const KEY_INDEX       = 'active_queue_index';
     const KEY_ROUND_ROBIN = 'round_robin_index';
-    const KEY_CALLBACKS = 'scheduled_callbacks';
+    const KEY_CALLBACKS   = 'scheduled_callbacks';
+    const KEY_TEMPLATES   = 'email_templates_v1';
+    const KEY_SIG         = 'email_signature_v1';
+    const KEY_CODEC       = 'preferred_codec';
 
-    let leads = JSON.parse(localStorage.getItem(KEY_LEADS)) || [];
-    let callQueue = JSON.parse(localStorage.getItem(KEY_QUEUE)) || [];
-    let queueIndex = parseInt(localStorage.getItem(KEY_INDEX)) || 0;
-    let roundRobinIndex = parseInt(localStorage.getItem(KEY_ROUND_ROBIN)) || 0;
-    let callbacks = JSON.parse(localStorage.getItem(KEY_CALLBACKS)) || [];
-    let currentPage = 1;
+    // ── STATE ─────────────────────────────────────────────────────────────
+    let leads          = JSON.parse(localStorage.getItem(KEY_LEADS))    || [];
+    let callQueue      = JSON.parse(localStorage.getItem(KEY_QUEUE))    || [];
+    let queueIndex     = parseInt(localStorage.getItem(KEY_INDEX))      || 0;
+    let roundRobinIndex= parseInt(localStorage.getItem(KEY_ROUND_ROBIN))|| 0;
+    let callbacks      = JSON.parse(localStorage.getItem(KEY_CALLBACKS))|| [];
+    let currentPage    = 1;
     const leadsPerPage = 20;
     let currentProfileId = null;
-    let showHidden = false;
-    let sortKey = 'name';
-    let sortDir = 1;
-    let device = null;
-    let activeCall = null;
-    let callTimerInterval = null;
-    let callStartTime = null;
+    let showHidden     = false;
+    let sortKey        = 'name';
+    let sortDir        = 1;
+    let device         = null;
+    let activeCall     = null;
+    let manualCall     = null;
+    let callTimerInterval   = null;
+    let callStartTime       = null;
+    let preferredCodec      = localStorage.getItem(KEY_CODEC) || 'opus';
 
+    // ── RECORDING STATE ───────────────────────────────────────────────────
+    let mediaRecorder    = null;
+    let recordingChunks  = [];
+    let isRecording      = false;
+    let currentRecordingLeadId = null;
+
+    // ── INDEXEDDB FOR RECORDINGS ──────────────────────────────────────────
+    let recDB = null;
+    function initRecDB() {
+        const req = indexedDB.open('dialerRecordings', 1);
+        req.onupgradeneeded = e => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('recordings')) {
+                db.createObjectStore('recordings', { keyPath: 'id', autoIncrement: true });
+            }
+        };
+        req.onsuccess = e => { recDB = e.target.result; };
+        req.onerror   = () => { console.warn('IndexedDB unavailable — recordings will be session-only'); };
+    }
+
+    function saveRecording(leadId, blob) {
+        return new Promise((resolve, reject) => {
+            if (!recDB) return resolve(null);
+            const tx = recDB.transaction('recordings', 'readwrite');
+            const store = tx.objectStore('recordings');
+            const rec = { leadId, timestamp: new Date().toISOString(), blob };
+            const req = store.add(rec);
+            req.onsuccess = e => resolve(e.target.result);
+            req.onerror   = reject;
+        });
+    }
+
+    function getRecordingsForLead(leadId) {
+        return new Promise((resolve) => {
+            if (!recDB) return resolve([]);
+            const tx = recDB.transaction('recordings', 'readonly');
+            const store = tx.objectStore('recordings');
+            const all = store.getAll();
+            all.onsuccess = e => resolve(e.target.result.filter(r => r.leadId === leadId));
+            all.onerror   = () => resolve([]);
+        });
+    }
+
+    function deleteRecording(id) {
+        if (!recDB) return;
+        const tx = recDB.transaction('recordings', 'readwrite');
+        tx.objectStore('recordings').delete(id);
+    }
+
+    // ── INIT ──────────────────────────────────────────────────────────────
     window.onload = () => {
         document.getElementById('dateLabel').innerText = luxon.DateTime.now().toLocaleString(luxon.DateTime.DATE_HUGE);
         updateClock();
         setInterval(updateClock, 1000);
         setInterval(checkCallbacks, 30000);
+        setInterval(updateSmartQueueCount, 60000);
         initTwilioDevice();
+        initRecDB();
         renderLeads();
         updateQueueUI();
         updateFilterResorts();
         renderCallbackList();
         checkCallbacks();
+        updateSmartQueueCount();
+        makeDraggable();
+        populateManualCallerIds();
     };
 
     function updateClock() {
         document.getElementById('clock').innerText = luxon.DateTime.now().toFormat('hh:mm:ss a');
     }
 
+    // ── TWILIO DEVICE ─────────────────────────────────────────────────────
     async function initTwilioDevice() {
         const statusEl = document.getElementById('twilioStatusDisplay');
         try {
             const res = await fetch(TOKEN_URL);
             if (!res.ok) throw new Error('HTTP ' + res.status);
             const data = await res.json();
-            device = new Twilio.Device(data.token, { codecPreferences: ['opus', 'pcmu'], logLevel: 1 });
+            const codecPref = preferredCodec === 'pcmu' ? ['pcmu', 'opus'] : ['opus', 'pcmu'];
+            device = new Twilio.Device(data.token, { codecPreferences: codecPref, logLevel: 1 });
             device.on('registered', () => {
                 statusEl.innerHTML = `<span class="status-dot online"></span><span style="color:#10b981;font-weight:bold;">Device Online & Ready</span>`;
             });
@@ -445,19 +655,60 @@
         }
     }
 
+    function setCodec(codec) {
+        preferredCodec = codec;
+        localStorage.setItem(KEY_CODEC, codec);
+        document.getElementById('codecOpusBtn').style.border = codec === 'opus' ? '2px solid var(--primary)' : '2px solid var(--border-color)';
+        document.getElementById('codecOpusBtn').style.background = codec === 'opus' ? 'rgba(0,123,255,0.1)' : 'none';
+        document.getElementById('codecPcmuBtn').style.border = codec === 'pcmu' ? '2px solid var(--primary)' : '2px solid var(--border-color)';
+        document.getElementById('codecPcmuBtn').style.background = codec === 'pcmu' ? 'rgba(0,123,255,0.1)' : 'none';
+        // Re-init device with new codec
+        if (device) {
+            device.destroy();
+            device = null;
+            initTwilioDevice();
+            alert(`Codec switched to ${codec === 'opus' ? 'HD Mode (Opus)' : 'Standard Mode (PCMU)'}. Twilio device is reconnecting...`);
+        }
+    }
+
+    // ── DRAGGABLE DIALER ──────────────────────────────────────────────────
+    function makeDraggable() {
+        const content = document.getElementById('dialerModalContent');
+        const handle  = document.getElementById('dialerDragHandle');
+        let isDragging = false, startX, startY, startLeft, startTop;
+
+        handle.addEventListener('mousedown', e => {
+            isDragging = true;
+            const rect = content.getBoundingClientRect();
+            startX = e.clientX; startY = e.clientY;
+            startLeft = rect.left; startTop = rect.top;
+            content.style.transform = 'none';
+            content.style.left = startLeft + 'px';
+            content.style.top  = startTop  + 'px';
+            e.preventDefault();
+        });
+        document.addEventListener('mousemove', e => {
+            if (!isDragging) return;
+            content.style.left = (startLeft + e.clientX - startX) + 'px';
+            content.style.top  = (startTop  + e.clientY - startY) + 'px';
+        });
+        document.addEventListener('mouseup', () => { isDragging = false; });
+    }
+
     // ── DTMF ──────────────────────────────────────────────────────────────
     function sendDTMF(digit) {
         if (activeCall) activeCall.sendDigits(digit);
+        if (manualCall) manualCall.sendDigits(digit);
     }
-
     function showDTMF() {
         document.getElementById('dtmfSection').style.display = 'block';
-        document.getElementById('profileDtmfSection').style.display = 'block';
+        const pd = document.getElementById('profileDtmfSection');
+        if (pd) pd.style.display = 'block';
     }
-
     function hideDTMF() {
         document.getElementById('dtmfSection').style.display = 'none';
-        document.getElementById('profileDtmfSection').style.display = 'none';
+        const pd = document.getElementById('profileDtmfSection');
+        if (pd) pd.style.display = 'none';
     }
 
     // ── CALL TIMER ────────────────────────────────────────────────────────
@@ -473,13 +724,79 @@
         const timerEl = document.getElementById(displayId);
         if (timerEl) { timerEl.style.display = 'block'; timerEl.textContent = '00:00'; }
     }
-
     function stopCallTimer(displayId) {
         clearInterval(callTimerInterval);
         callTimerInterval = null;
         callStartTime = null;
         const el = document.getElementById(displayId);
         if (el) el.style.display = 'none';
+    }
+
+    // ── RECORDING ─────────────────────────────────────────────────────────
+    async function toggleRecording() {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            await startRecording();
+        }
+    }
+
+    async function startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            recordingChunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordingChunks.push(e.data); };
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(recordingChunks, { type: 'audio/webm' });
+                stream.getTracks().forEach(t => t.stop());
+                const leadId = callQueue[queueIndex]?.id;
+                if (leadId) {
+                    await saveRecording(leadId, blob);
+                }
+                recordingChunks = [];
+                mediaRecorder = null;
+            };
+            mediaRecorder.start();
+            isRecording = true;
+            currentRecordingLeadId = callQueue[queueIndex]?.id;
+            const btn = document.getElementById('recordBtn');
+            btn.classList.add('recording');
+            btn.textContent = '⏹ Stop';
+            document.getElementById('recordingStatus').style.display = 'block';
+        } catch (err) {
+            alert('Microphone access denied. Please allow mic access in your browser settings and try again.');
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+        isRecording = false;
+        const btn = document.getElementById('recordBtn');
+        btn.classList.remove('recording');
+        btn.textContent = '🔴 Record';
+        document.getElementById('recordingStatus').style.display = 'none';
+    }
+
+    async function renderProfileRecordings(leadId) {
+        const container = document.getElementById('profileRecordings');
+        const recs = await getRecordingsForLead(leadId);
+        if (!recs.length) {
+            container.innerHTML = '<div style="font-size:0.8em;color:#718096;">No recordings for this lead yet.<br><small>Hit the 🔴 Record button in the dialer to capture a call.</small></div>';
+            return;
+        }
+        container.innerHTML = recs.reverse().map(r => {
+            const url = URL.createObjectURL(r.blob);
+            const dt  = new Date(r.timestamp).toLocaleString();
+            return `
+            <div class="recording-entry">
+                <span style="font-size:0.75em;color:#718096;white-space:nowrap;">${dt}</span>
+                <audio controls src="${url}" style="flex:1;height:32px;"></audio>
+                <button onclick="deleteRecording(${r.id});renderProfileRecordings('${leadId}')" style="padding:3px 8px;background:var(--danger);color:white;border:none;border-radius:5px;cursor:pointer;font-size:0.75em;">✕</button>
+            </div>`;
+        }).join('');
     }
 
     // ── QUICK NOTES ───────────────────────────────────────────────────────
@@ -540,7 +857,7 @@
             list.innerHTML = '<div style="font-size:0.8em;color:#718096;">No callbacks scheduled.</div>';
             return;
         }
-        list.innerHTML = pending.map((cb, i) => `
+        list.innerHTML = pending.map((cb) => `
             <div class="callback-alert" onclick="openProfile('${cb.leadId}')">
                 <strong>${cb.name}</strong> — ${formatPhone(cb.phone)}<br>
                 <small>📅 ${cb.datetime.replace('T', ' ')}</small>
@@ -555,11 +872,59 @@
         renderCallbackList();
     }
 
+    // ── SMART TIMEZONE QUEUE ──────────────────────────────────────────────
+    function getLeadLocalHour(ph) {
+        const c  = String(ph).replace(/\D/g,'');
+        const ac = c.length>=10 ? c.substring(c.length-10, c.length-7) : '';
+        const zones = {
+            'America/Chicago':['205','210','225','228','312','314','318','337','402','405','414','501','504','512','515','601','612','615','630','636','651','682','713','715','731','769','816','817','832','870','901','903','913','918','931','936','940','956','972','979','985'],
+            'America/Denver':['303','307','385','406','435','505','719','720','801','928','970'],
+            'America/Los_Angeles':['206','213','253','310','323','360','408','415','424','442','503','509','510','530','541','559','562','619','626','650','657','661','669','702','707','714','747','760','775','805','818','831','858','916','925','949','951','971']
+        };
+        let zone = 'America/New_York';
+        for (const [z, codes] of Object.entries(zones)) {
+            if (codes.includes(ac)) { zone=z; break; }
+        }
+        return { hour: luxon.DateTime.now().setZone(zone).hour, zone };
+    }
+
+    function updateSmartQueueCount() {
+        const available = leads.filter(l => !l.hidden);
+        const prime = available.filter(l => {
+            const { hour } = getLeadLocalHour(l.phone);
+            return hour >= 9 && hour < 20; // 9am-8pm their time
+        });
+        document.getElementById('smartQueueCount').textContent = prime.length;
+    }
+
+    function startSmartQueue() {
+        const available = leads.filter(l => !l.hidden);
+        // Filter leads where it's currently between 9AM and 8PM their local time
+        let prime = available.filter(l => {
+            const { hour } = getLeadLocalHour(l.phone);
+            return hour >= 9 && hour < 20;
+        });
+        if (!prime.length) {
+            // Fall back to anyone in a reasonable window
+            prime = available;
+            alert('No leads in prime calling hours right now. Queuing all available leads instead.');
+        }
+        // Sort: closest to noon = most prime time
+        prime.sort((a, b) => {
+            const hourA = getLeadLocalHour(a.phone).hour;
+            const hourB = getLeadLocalHour(b.phone).hour;
+            const distA = Math.abs(hourA - 13); // distance from 1PM
+            const distB = Math.abs(hourB - 13);
+            return distA - distB;
+        });
+        callQueue = prime.slice(0, 100);
+        queueIndex = 0;
+        saveQueue(); updateQueueUI(); openDialerModal();
+    }
+
     // ── QUEUE ─────────────────────────────────────────────────────────────
     function startQueue() {
-        const freshOnly = document.getElementById('onlyFreshToday').checked;
         let available = leads.filter(l => !l.hidden);
-        if (freshOnly) available = available.filter(l => l.lastCalledDate !== luxon.DateTime.now().toISODate());
         if (!available.length) return alert('No available leads matching criteria.');
         callQueue = shuffle(available).slice(0, 100);
         queueIndex = 0;
@@ -567,7 +932,6 @@
     }
 
     function startFullQueue() {
-        if (!confirm('Include leads already called today?')) return;
         let available = leads.filter(l => !l.hidden);
         if (!available.length) return alert('No leads in database.');
         callQueue = shuffle(available).slice(0, 100);
@@ -576,6 +940,7 @@
     }
 
     function stopQueue() {
+        if (isRecording) stopRecording();
         callQueue = []; queueIndex = 0;
         saveQueue(); updateQueueUI();
         closeModal('dialerModal');
@@ -595,6 +960,12 @@
         document.getElementById('callbackDateTime').value = '';
         hideDTMF();
         stopCallTimer('callTimerDisplay');
+        // Reset recording button
+        if (isRecording) stopRecording();
+        const recBtn = document.getElementById('recordBtn');
+        recBtn.classList.remove('recording');
+        recBtn.textContent = '🔴 Record';
+        document.getElementById('recordingStatus').style.display = 'none';
 
         const sel = document.getElementById('callerIdSelect');
         const previewAutoNum = TWILIO_NUMBERS[roundRobinIndex % ACTIVE_NUMBER_COUNT];
@@ -603,9 +974,7 @@
         sel.value = 'auto';
         document.getElementById('twilioCallerId').textContent = formatPhone(previewAutoNum);
 
-        // Request notification permission
         if (Notification.permission === 'default') Notification.requestPermission();
-
         resetDialButton();
         document.getElementById('dialerModal').style.display = 'block';
     }
@@ -677,6 +1046,7 @@
     }
 
     function queueAction(type) {
+        if (isRecording) stopRecording();
         hangUp();
         const lead = leads.find(l => l.id === callQueue[queueIndex]?.id);
         if (lead) {
@@ -720,7 +1090,7 @@
         if (!device) return alert('Twilio device not connected.');
         const lead = leads.find(l => l.id === currentProfileId);
         if (!lead) return;
-        if (activeCall) return alert('Already on a call. Hang up first.');
+        if (activeCall || manualCall) return alert('Already on a call. Hang up first.');
         const callerNum = lead.twilioNumber || TWILIO_NUMBERS[0];
         const btn = document.getElementById('profileCallNowBtn');
         const statusDiv = document.getElementById('profileCallStatus');
@@ -768,7 +1138,261 @@
         hideDTMF(); stopCallTimer('profileCallTimer');
     }
 
-    // ── CUSTOM QUEUE ──────────────────────────────────────────────────────
+    // ── MANUAL DIAL ───────────────────────────────────────────────────────
+    function populateManualCallerIds() {
+        const sel = document.getElementById('manualCallerIdSelect');
+        sel.innerHTML = TWILIO_NUMBERS.map(n => `<option value="${n}">${formatPhone(n)}</option>`).join('');
+    }
+
+    function openManualDialModal() {
+        document.getElementById('manualDialNumber').value = '';
+        document.getElementById('manualCallStatus').style.display = 'none';
+        const btn = document.getElementById('manualDialBtn');
+        btn.disabled = false;
+        btn.textContent = '📲 DIAL NOW';
+        btn.style.background = 'linear-gradient(135deg,#10b981,#34d399)';
+        btn.onclick = placeManualCall;
+        document.getElementById('manualDialModal').style.display = 'block';
+    }
+
+    async function placeManualCall() {
+        if (!device) return alert('Twilio device not connected. Check the token URL.');
+        if (activeCall || manualCall) return alert('Already on a call. Hang up first.');
+        const rawNum = document.getElementById('manualDialNumber').value.replace(/\D/g,'');
+        if (rawNum.length < 10) return alert('Please enter a valid 10-digit phone number.');
+        const toNum     = rawNum.length === 10 ? '+1' + rawNum : '+' + rawNum;
+        const fromNum   = document.getElementById('manualCallerIdSelect').value;
+        const btn       = document.getElementById('manualDialBtn');
+        btn.disabled    = true;
+        btn.textContent = '⏳ CONNECTING...';
+        try {
+            manualCall = await device.connect({ params: { To: toNum, From: fromNum } });
+            manualCall.on('disconnect', () => {
+                manualCall = null;
+                btn.disabled = false; btn.textContent = '📲 DIAL NOW';
+                btn.style.background = 'linear-gradient(135deg,#10b981,#34d399)';
+                btn.onclick = placeManualCall;
+                document.getElementById('manualCallStatus').style.display = 'none';
+                stopCallTimer('manualCallTimer');
+            });
+            manualCall.on('cancel', () => {
+                manualCall = null;
+                btn.disabled = false; btn.textContent = '📲 DIAL NOW';
+                document.getElementById('manualCallStatus').style.display = 'none';
+                stopCallTimer('manualCallTimer');
+            });
+            btn.textContent = '🛑 HANG UP';
+            btn.style.background = 'linear-gradient(135deg,#dc3545,#c53030)';
+            btn.disabled = false;
+            btn.onclick = hangUpManual;
+            document.getElementById('manualCallStatus').style.display = 'block';
+            startCallTimer('manualCallTimer');
+        } catch (err) {
+            alert('Call failed: ' + err.message);
+            btn.disabled = false; btn.textContent = '📲 DIAL NOW';
+            btn.style.background = 'linear-gradient(135deg,#10b981,#34d399)';
+        }
+    }
+
+    function hangUpManual() {
+        if (manualCall) { manualCall.disconnect(); manualCall = null; }
+        const btn = document.getElementById('manualDialBtn');
+        btn.disabled = false; btn.textContent = '📲 DIAL NOW';
+        btn.style.background = 'linear-gradient(135deg,#10b981,#34d399)';
+        btn.onclick = placeManualCall;
+        document.getElementById('manualCallStatus').style.display = 'none';
+        stopCallTimer('manualCallTimer');
+    }
+
+    function closeManualDial() {
+        hangUpManual();
+        closeModal('manualDialModal');
+    }
+
+    // ── AUDIO QUALITY TEST ────────────────────────────────────────────────
+    let audioTestStream = null;
+    let audioAnalyser   = null;
+    let audioTestActive = false;
+
+    async function startAudioTest() {
+        const btn = document.getElementById('audioTestStartBtn');
+        const msg = document.getElementById('audioTestMsg');
+        const bar = document.getElementById('audioTestBar');
+        const results = document.getElementById('audioTestResults');
+
+        btn.disabled = true;
+        msg.textContent = 'Accessing your microphone...';
+
+        try {
+            audioTestStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (err) {
+            msg.textContent = '❌ Microphone access denied.';
+            btn.disabled = false;
+            document.getElementById('audioResultCards').innerHTML = `
+                <div class="audio-tip warn">
+                    <strong>🔒 Fix: Allow Microphone Access</strong><br>
+                    1. Click the 🔒 padlock icon in your browser's address bar<br>
+                    2. Find "Microphone" and set it to "Allow"<br>
+                    3. Refresh the page and try again
+                </div>`;
+            results.style.display = 'block';
+            return;
+        }
+
+        const audioCtx  = new AudioContext();
+        audioAnalyser   = audioCtx.createAnalyser();
+        const source    = audioCtx.createMediaStreamSource(audioTestStream);
+        source.connect(audioAnalyser);
+        audioAnalyser.fftSize = 256;
+        const dataArr   = new Uint8Array(audioAnalyser.frequencyBinCount);
+
+        bar.style.display = 'block';
+        msg.textContent = '🔴 Recording... Speak normally for 5 seconds';
+        audioTestActive = true;
+
+        let maxLevel = 0;
+        let samples  = [];
+        const levelFill = document.getElementById('audioLevelFill');
+
+        const sampleInterval = setInterval(() => {
+            audioAnalyser.getByteFrequencyData(dataArr);
+            const avg = dataArr.reduce((a,b) => a+b, 0) / dataArr.length;
+            const pct = Math.min(100, (avg / 128) * 100);
+            levelFill.style.width = pct + '%';
+            levelFill.style.background = pct < 10 ? '#dc3545' : pct < 40 ? '#f6ad55' : '#10b981';
+            samples.push(avg);
+            if (avg > maxLevel) maxLevel = avg;
+        }, 100);
+
+        setTimeout(() => {
+            clearInterval(sampleInterval);
+            audioTestStream.getTracks().forEach(t => t.stop());
+            audioTestActive = false;
+            bar.style.display = 'none';
+            btn.disabled = false;
+            btn.textContent = '🔄 Run Again';
+
+            const avgLevel  = samples.reduce((a,b) => a+b, 0) / samples.length;
+            const silentPct = samples.filter(s => s < 5).length / samples.length;
+
+            msg.textContent = '✅ Test complete — see results below';
+            results.style.display = 'block';
+
+            let cards = '';
+
+            // Mic volume check
+            if (avgLevel < 10) {
+                cards += `<div class="audio-tip warn">
+                    <strong>⚠️ Microphone Volume Too Low</strong><br>
+                    Your mic is barely picking up sound. Here's how to fix it:<br>
+                    1. Right-click the speaker icon in your Windows taskbar → Open Sound Settings<br>
+                    2. Click "Sound Control Panel" → Recording tab<br>
+                    3. Double-click your microphone → Properties → Levels tab<br>
+                    4. Drag the microphone slider up to 80–90%<br>
+                    5. Run the test again to confirm
+                </div>`;
+            } else if (avgLevel > 90) {
+                cards += `<div class="audio-tip warn">
+                    <strong>⚠️ Microphone Volume Too High (May Cause Distortion)</strong><br>
+                    1. Right-click speaker icon → Open Sound Settings → Sound Control Panel → Recording tab<br>
+                    2. Double-click your microphone → Properties → Levels tab<br>
+                    3. Lower the slider to around 70%<br>
+                    4. Also go to the Enhancements tab and check "Disable all enhancements"
+                </div>`;
+            } else {
+                cards += `<div class="audio-tip good">
+                    <strong>✅ Microphone Volume: Good</strong><br>
+                    Your mic level looks solid — no adjustments needed there.
+                </div>`;
+            }
+
+            // Silence check
+            if (silentPct > 0.5) {
+                cards += `<div class="audio-tip warn">
+                    <strong>⚠️ Too Much Silence Detected</strong><br>
+                    This usually means your mic has noise suppression cutting out your voice. Fix:<br>
+                    1. Right-click speaker icon → Sound Settings → Sound Control Panel → Recording tab<br>
+                    2. Double-click your microphone → Properties<br>
+                    3. Go to the <strong>Enhancements</strong> tab<br>
+                    4. Check the box "Disable all enhancements" and click OK
+                </div>`;
+            }
+
+            // Internet tip
+            cards += `<div class="audio-tip">
+                <strong>💡 Internet Speed Tip</strong><br>
+                For the best call quality:<br>
+                • Close YouTube, Netflix, or any streaming tabs while calling<br>
+                • Pause any downloads or Windows updates<br>
+                • If calls still sound choppy, switch to "Standard Mode (PCMU)" below — it uses less internet and often sounds better on slower connections
+            </div>`;
+
+            // Echo tip
+            cards += `<div class="audio-tip">
+                <strong>🔊 Echo / Feedback Tip</strong><br>
+                If the person you call hears themselves echoing:<br>
+                • Use headphones instead of speakers — this eliminates echo completely<br>
+                • Lower your speaker volume<br>
+                • Move your microphone further from your speakers
+            </div>`;
+
+            document.getElementById('audioResultCards').innerHTML = cards;
+
+            // Update codec button states
+            document.getElementById('codecOpusBtn').style.border = preferredCodec === 'opus' ? '2px solid var(--primary)' : '2px solid var(--border-color)';
+            document.getElementById('codecOpusBtn').style.background = preferredCodec === 'opus' ? 'rgba(0,123,255,0.1)' : 'none';
+            document.getElementById('codecPcmuBtn').style.border = preferredCodec === 'pcmu' ? '2px solid var(--primary)' : '2px solid var(--border-color)';
+            document.getElementById('codecPcmuBtn').style.background = preferredCodec === 'pcmu' ? 'rgba(0,123,255,0.1)' : 'none';
+
+        }, 5000);
+    }
+
+    function openAudioTestModal() {
+        document.getElementById('audioTestMsg').textContent = 'Click "Start Test" to check your audio';
+        document.getElementById('audioTestBar').style.display = 'none';
+        document.getElementById('audioTestResults').style.display = 'none';
+        document.getElementById('audioTestStartBtn').disabled = false;
+        document.getElementById('audioTestStartBtn').textContent = '▶ Start Test (5 sec)';
+        document.getElementById('audioTestModal').style.display = 'block';
+    }
+
+    // ── ADD LEAD ──────────────────────────────────────────────────────────
+    function openAddLeadModal() {
+        ['addLeadName','addLeadPhone','addLeadEmail','addLeadResort','addLeadCity'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        document.getElementById('addLeadModal').style.display = 'block';
+    }
+
+    function saveAddLead() {
+        const name  = document.getElementById('addLeadName').value.trim();
+        const phone = document.getElementById('addLeadPhone').value.replace(/\D/g,'');
+        if (!name)  return alert('Please enter a name.');
+        if (phone.length < 10) return alert('Please enter a valid phone number.');
+        if (leads.some(l => l.phone === phone)) return alert('This phone number is already in your list.');
+        const bucket = leads.length % ACTIVE_NUMBER_COUNT;
+        const city   = document.getElementById('addLeadCity').value.trim() || getCityFromPhone(phone);
+        leads.push({
+            id: 'L-' + Math.random().toString(36).substr(2, 9),
+            name,
+            phone,
+            email:   document.getElementById('addLeadEmail').value.trim(),
+            resort:  document.getElementById('addLeadResort').value.trim() || 'Manual',
+            city,
+            calls:   0,
+            appointment: null,
+            notes:   '',
+            hidden:  false,
+            disposition: '',
+            bucket,
+            twilioNumber: TWILIO_NUMBERS[bucket],
+            lastCalledDate: null
+        });
+        save(); closeModal('addLeadModal'); renderLeads(); updateFilterResorts(); updateSmartQueueCount();
+        alert(`"${name}" added successfully!`);
+    }
+
+    // ── CUSTOM QUEUE (kept for internal use) ──────────────────────────────
     function openCustomQueueModal() {
         const sel = document.getElementById('customResortSelect');
         const resorts = [...new Set(leads.map(l => l.resort))].filter(Boolean);
@@ -777,9 +1401,9 @@
     }
 
     function buildCustomQueue() {
-        const resort = document.getElementById('customResortSelect').value;
-        const max = parseInt(document.getElementById('customQueueMax').value) || 50;
-        const freshOnly = document.getElementById('customOnlyFresh').checked;
+        const resort   = document.getElementById('customResortSelect').value;
+        const max      = parseInt(document.getElementById('customQueueMax').value) || 50;
+        const freshOnly= document.getElementById('customOnlyFresh').checked;
         let pool = leads.filter(l => !l.hidden);
         if (resort) pool = pool.filter(l => l.resort === resort);
         if (freshOnly) pool = pool.filter(l => l.lastCalledDate !== luxon.DateTime.now().toISODate());
@@ -804,10 +1428,10 @@
             ['mapNameSelect','mapPhoneSelect','mapEmailSelect','mapResortSelect','mapCitySelect','mapCallsSelect','mapApptSelect','mapNotesSelect'].forEach(id => {
                 const s = document.getElementById(id);
                 s.innerHTML = `<option value="">-- None --</option>` + cols.map(c => `<option value="${c}">${c}</option>`).join('');
-                if (id === 'mapNameSelect') s.value = cols.find(c => /name/i.test(c)) || '';
+                if (id === 'mapNameSelect')  s.value = cols.find(c => /name/i.test(c))         || '';
                 if (id === 'mapPhoneSelect') s.value = cols.find(c => /phone|number/i.test(c)) || '';
-                if (id === 'mapResortSelect') s.value = cols.find(c => /resort/i.test(c)) || '';
-                if (id === 'mapCitySelect') s.value = cols.find(c => /city|state/i.test(c)) || '';
+                if (id === 'mapResortSelect')s.value = cols.find(c => /resort/i.test(c))       || '';
+                if (id === 'mapCitySelect')  s.value = cols.find(c => /city|state/i.test(c))   || '';
             });
             document.getElementById('excelMapModal').style.display = 'block';
         };
@@ -819,12 +1443,12 @@
         const nC = document.getElementById('mapNameSelect').value;
         const pC = document.getElementById('mapPhoneSelect').value;
         if (!nC || !pC) return alert('Name and Phone columns are required.');
-        const rC = document.getElementById('mapResortSelect').value;
-        const cC = document.getElementById('mapCitySelect').value;
-        const eC = document.getElementById('mapEmailSelect').value;
+        const rC    = document.getElementById('mapResortSelect').value;
+        const cC    = document.getElementById('mapCitySelect').value;
+        const eC    = document.getElementById('mapEmailSelect').value;
         const callC = document.getElementById('mapCallsSelect').value;
         const apptC = document.getElementById('mapApptSelect').value;
-        const notesC = document.getElementById('mapNotesSelect').value;
+        const notesC= document.getElementById('mapNotesSelect').value;
         let added = 0;
         window.tempData.forEach((row) => {
             const ph = String(row[pC] || '').replace(/\D/g, '');
@@ -832,14 +1456,14 @@
             const bucket = added % ACTIVE_NUMBER_COUNT;
             leads.push({
                 id: 'L-' + Math.random().toString(36).substr(2, 9),
-                name: row[nC] || 'Unknown',
+                name:  row[nC] || 'Unknown',
                 phone: ph,
-                email: eC ? (row[eC] || '') : '',
-                resort: rC ? (row[rC] || 'Batch') : 'Batch',
-                city: cC ? (row[cC] || getCityFromPhone(ph)) : getCityFromPhone(ph),
+                email: eC    ? (row[eC]    || '')   : '',
+                resort:rC    ? (row[rC]    || 'Batch'): 'Batch',
+                city:  cC    ? (row[cC]    || getCityFromPhone(ph)) : getCityFromPhone(ph),
                 calls: callC ? (parseInt(row[callC]) || 0) : 0,
                 appointment: apptC ? (row[apptC] || null) : null,
-                notes: notesC ? (row[notesC] || '') : '',
+                notes: notesC? (row[notesC] || '')  : '',
                 hidden: false,
                 disposition: '',
                 bucket,
@@ -848,16 +1472,16 @@
             });
             added++;
         });
-        save(); closeModal('excelMapModal'); renderLeads(); updateFilterResorts();
+        save(); closeModal('excelMapModal'); renderLeads(); updateFilterResorts(); updateSmartQueueCount();
         alert(`Import complete! Added ${added} leads.`);
     }
 
     // ── RENDER ────────────────────────────────────────────────────────────
     function renderLeads() {
-        const body = document.getElementById('leadBody');
-        const query = document.getElementById('searchInput').value.toLowerCase();
-        const resort = document.getElementById('resortFilter').value;
-        const noConnectOnly = document.getElementById('noConnectFilter').checked;
+        const body         = document.getElementById('leadBody');
+        const query        = document.getElementById('searchInput').value.toLowerCase();
+        const resort       = document.getElementById('resortFilter').value;
+        const noConnectOnly= document.getElementById('noConnectFilter').checked;
 
         let filtered = leads.filter(l => {
             if (!showHidden && l.hidden) return false;
@@ -872,8 +1496,8 @@
             return (typeof va === 'string' ? va.localeCompare(vb) : va - vb) * sortDir;
         });
 
-        const start = (currentPage - 1) * leadsPerPage;
-        const slice = filtered.slice(start, start + leadsPerPage);
+        const start  = (currentPage - 1) * leadsPerPage;
+        const slice  = filtered.slice(start, start + leadsPerPage);
         const pendingCallbackIds = new Set(callbacks.filter(cb => !cb.notified).map(cb => cb.leadId));
 
         body.innerHTML = slice.map(l => `
@@ -900,35 +1524,85 @@
         const l = leads.find(x => x.id === id);
         if (!l) return;
         currentProfileId = id;
-        document.getElementById('profileName').textContent = l.name;
-        document.getElementById('profilePhone').textContent = formatPhone(l.phone);
-        document.getElementById('profileCity').textContent = l.city || getCityFromPhone(l.phone);
-        document.getElementById('profileResort').textContent = l.resort || '-';
-        document.getElementById('profileCalls').textContent = l.calls || 0;
-        document.getElementById('profileLast').textContent = l.lastCalledDate || 'Never';
-        document.getElementById('profileEmail').value = l.email || '';
-        document.getElementById('profileAppt').value = l.appointment || '';
-        document.getElementById('profileNotes').value = l.notes || '';
+        document.getElementById('profileName').textContent    = l.name;
+        document.getElementById('profileNameEdit').value      = l.name;
+        document.getElementById('profilePhoneEdit').value     = formatPhone(l.phone);
+        document.getElementById('profilePhone').textContent   = formatPhone(l.phone);
+        document.getElementById('profileCity').textContent    = l.city || getCityFromPhone(l.phone);
+        document.getElementById('profileResort').textContent  = l.resort || '-';
+        document.getElementById('profileCalls').textContent   = l.calls || 0;
+        document.getElementById('profileLast').textContent    = l.lastCalledDate || 'Never';
+        document.getElementById('profileEmail').value         = l.email || '';
+        document.getElementById('profileAppt').value          = l.appointment || '';
+        document.getElementById('profileNotes').value         = l.notes || '';
         document.getElementById('profileTwilioNumber').textContent = formatPhone(l.twilioNumber || TWILIO_NUMBERS[0]);
-        document.getElementById('emailOutputs').innerHTML = '';
+        document.getElementById('emailOutputs').innerHTML     = '';
         document.querySelectorAll('input[name="emailTemplate"]').forEach(c => c.checked = false);
         document.getElementById('profileCallbackDateTime').value = '';
         const btn = document.getElementById('profileCallNowBtn');
         btn.disabled = false; btn.innerText = '📲 CALL NOW';
         document.getElementById('profileCallStatus').style.display = 'none';
         hideDTMF();
+        renderProfileRecordings(id);
         document.getElementById('profileModal').style.display = 'block';
     }
 
     function saveProfile() {
         const l = leads.find(x => x.id === currentProfileId);
         if (l) {
-            l.email = document.getElementById('profileEmail').value;
+            const newName  = document.getElementById('profileNameEdit').value.trim();
+            const newPhone = document.getElementById('profilePhoneEdit').value.replace(/\D/g,'');
+            if (newName)  l.name  = newName;
+            if (newPhone.length >= 10) { l.phone = newPhone; l.city = l.city || getCityFromPhone(newPhone); }
+            l.email       = document.getElementById('profileEmail').value;
             l.appointment = document.getElementById('profileAppt').value || null;
-            l.notes = document.getElementById('profileNotes').value;
-            save(); renderLeads();
+            l.notes       = document.getElementById('profileNotes').value;
+            save(); renderLeads(); updateSmartQueueCount();
         }
         closeModal('profileModal');
+    }
+
+    // ── EMAIL TEMPLATES ───────────────────────────────────────────────────
+    function getDefaultTemplates() {
+        const sig = JSON.parse(localStorage.getItem(KEY_SIG) || '{}');
+        const sigBlock = `\n\nBest regards,\n${sig.name || 'Your Name'}\n${sig.title || 'Vacation Consultant'}\n${sig.phone || ''}${sig.ext ? ' ext. ' + sig.ext : ''}`;
+        return {
+            inquiry:       `Subject: Following Up on Your Inquiry\n\nHi {lastName},\n\nThank you for your interest in {resort}. I wanted to follow up and answer any questions you may have about your vacation options.${sigBlock}`,
+            thankyou_quick:`Subject: Thank You for Speaking With Us\n\nHi {lastName},\n\nThank you for taking my call today regarding {resort}. It was great speaking with you. I'll be in touch shortly with more details.${sigBlock}`,
+            followup_long: `Subject: Checking Back In — {resort}\n\nHi {lastName},\n\nI wanted to circle back and see if you had any questions since we last spoke about {resort}. We have some exciting options available.${sigBlock}`
+        };
+    }
+
+    function openEditTemplatesModal() {
+        const saved  = JSON.parse(localStorage.getItem(KEY_TEMPLATES) || '{}');
+        const dflt   = getDefaultTemplates();
+        const sig    = JSON.parse(localStorage.getItem(KEY_SIG) || '{}');
+        document.getElementById('tplInquiry').value  = saved.inquiry       || dflt.inquiry;
+        document.getElementById('tplThankyou').value = saved.thankyou_quick|| dflt.thankyou_quick;
+        document.getElementById('tplFollowup').value = saved.followup_long || dflt.followup_long;
+        document.getElementById('sigName').value     = sig.name  || '';
+        document.getElementById('sigTitle').value    = sig.title || '';
+        document.getElementById('sigPhone').value    = sig.phone || '';
+        document.getElementById('sigExt').value      = sig.ext   || '';
+        document.getElementById('editTemplatesModal').style.display = 'block';
+    }
+
+    function saveEmailTemplates() {
+        const templates = {
+            inquiry:       document.getElementById('tplInquiry').value,
+            thankyou_quick:document.getElementById('tplThankyou').value,
+            followup_long: document.getElementById('tplFollowup').value
+        };
+        const sig = {
+            name:  document.getElementById('sigName').value,
+            title: document.getElementById('sigTitle').value,
+            phone: document.getElementById('sigPhone').value,
+            ext:   document.getElementById('sigExt').value
+        };
+        localStorage.setItem(KEY_TEMPLATES, JSON.stringify(templates));
+        localStorage.setItem(KEY_SIG, JSON.stringify(sig));
+        closeModal('editTemplatesModal');
+        alert('Templates saved! They will be used from now on when you generate emails.');
     }
 
     function generateEmailTemplates() {
@@ -936,18 +1610,28 @@
         if (!l) return;
         const checked = [...document.querySelectorAll('input[name="emailTemplate"]:checked')].map(c => c.value);
         if (!checked.length) return alert('Select at least one template.');
-        const fn = l.name.split(' ')[0];
-        const templates = {
-            inquiry: `Subject: Following Up on Your Inquiry\n\nHi ${fn},\n\nThank you for your interest. I wanted to follow up and answer any questions you may have.\n\nBest regards`,
-            thankyou_quick: `Subject: Thank You for Speaking With Us\n\nHi ${fn},\n\nThank you for taking my call today. It was great speaking with you. I'll be in touch shortly.\n\nBest regards`,
-            followup_long: `Subject: Checking Back In\n\nHi ${fn},\n\nI wanted to circle back and see if you had any questions since we last spoke.\n\nBest regards`
-        };
-        document.getElementById('emailOutputs').innerHTML = checked.map(k => `
+
+        const saved  = JSON.parse(localStorage.getItem(KEY_TEMPLATES) || '{}');
+        const dflt   = getDefaultTemplates();
+        const merged = { ...dflt, ...saved };
+
+        const nameParts = l.name.split(' ');
+        const firstName = nameParts[0] || l.name;
+        const lastName  = nameParts.length > 1 ? nameParts[nameParts.length - 1] : l.name;
+        const resort    = l.resort || 'your resort';
+
+        document.getElementById('emailOutputs').innerHTML = checked.map(k => {
+            let text = merged[k] || dflt[k] || '';
+            text = text
+                .replace(/\{firstName\}/g, firstName)
+                .replace(/\{lastName\}/g, lastName)
+                .replace(/\{resort\}/g, resort);
+            return `
             <div style="margin-bottom:12px;">
-                <label style="text-transform:none;font-size:0.85em;">${k}</label>
-                <textarea readonly style="height:100px;font-size:0.8em;">${templates[k]}</textarea>
-            </div>
-        `).join('');
+                <label style="text-transform:none;font-size:0.85em;color:var(--primary);">${k.replace('_', ' ').toUpperCase()}</label>
+                <textarea style="height:130px;font-size:0.8em;">${text}</textarea>
+            </div>`;
+        }).join('');
     }
 
     // ── SIDEBAR ───────────────────────────────────────────────────────────
@@ -963,7 +1647,7 @@
 
     function renderCallLog() {
         const list = document.getElementById('callLogList');
-        const logs = leads.filter(l => l.calls > 0).sort((a,b) => (b.lastCalledDate||'').localeCompare(a.lastCalledDate||''));
+        const logs  = leads.filter(l => l.calls > 0).sort((a,b) => (b.lastCalledDate||'').localeCompare(a.lastCalledDate||''));
         list.innerHTML = logs.slice(0,15).map(l => `
             <div onclick="openProfile('${l.id}')" class="log-entry">
                 <b>${l.name}</b> ${l.disposition==='no_connect'?'❌':l.disposition==='vm'?'📬':'📞'}<br>
@@ -974,22 +1658,22 @@
 
     // ── STATS ─────────────────────────────────────────────────────────────
     function updateStats() {
-        document.getElementById('statTotal').innerText = leads.length;
-        document.getElementById('statCalled').innerText = leads.filter(l => (l.calls||0) > 0).length;
-        document.getElementById('statCallsToday').innerText = leads.reduce((s,l) => s+(l.calls||0), 0);
+        document.getElementById('statTotal').innerText    = leads.length;
+        document.getElementById('statCalled').innerText   = leads.filter(l => (l.calls||0) > 0).length;
+        document.getElementById('statCallsToday').innerText= leads.reduce((s,l) => s+(l.calls||0), 0);
         document.getElementById('statZeroDial').innerText = leads.filter(l => !(l.calls||0) && !l.hidden).length;
         const finished = leads.filter(l => l.hidden).length;
         const perc = leads.length ? Math.round((finished/leads.length)*100) : 0;
-        document.getElementById('progressLabel').innerText = `LIST PROGRESS: ${perc}%`;
-        document.getElementById('progressCount').innerText = `${finished} / ${leads.length} Finished`;
-        document.getElementById('progressBar').style.width = perc + '%';
+        document.getElementById('progressLabel').innerText= `LIST PROGRESS: ${perc}%`;
+        document.getElementById('progressCount').innerText= `${finished} / ${leads.length} Finished`;
+        document.getElementById('progressBar').style.width= perc + '%';
     }
 
     function updateQueueUI() {
         const bar = document.getElementById('activeQueueBar');
         if (!callQueue.length) { bar.style.display='none'; return; }
         bar.style.display = 'flex';
-        document.getElementById('queueProgress').textContent = `Playing ${queueIndex+1} of ${callQueue.length}`;
+        document.getElementById('queueProgress').textContent  = `Playing ${queueIndex+1} of ${callQueue.length}`;
         document.getElementById('queueCurrentName').textContent = callQueue[queueIndex]?.name || '';
     }
 
@@ -1005,7 +1689,6 @@
     }
 
     function changePage(d) { currentPage = Math.max(1, currentPage+d); renderLeads(); }
-    function toggleShowHidden() { showHidden = !showHidden; renderLeads(); }
     function toggleTheme() {
         const dark = document.body.getAttribute('data-theme') === 'dark';
         document.body.setAttribute('data-theme', dark ? 'light' : 'dark');
@@ -1018,6 +1701,14 @@
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Data');
         XLSX.writeFile(wb, filename);
+    }
+
+    function exportAnsweredLeads() {
+        const data = leads
+            .filter(l => (l.calls||0) > 0 && l.disposition !== 'no_connect')
+            .map(l => ({ Name:l.name, Phone:formatPhone(l.phone), Resort:l.resort, City:l.city, Calls:l.calls||0, Disposition:l.disposition||'', LastCalled:l.lastCalledDate||'', Appointment:l.appointment||'', Notes:l.notes||'' }));
+        if (!data.length) return alert('No answered leads to export yet.');
+        exportToExcel(data, `answered_leads_${luxon.DateTime.now().toISODate()}.xlsx`);
     }
 
     function exportWeeklyRecap() {
@@ -1047,14 +1738,14 @@
     function deleteAllLeads() {
         if (!confirm('DELETE ALL LEADS? This cannot be undone.')) return;
         leads=[]; callQueue=[]; queueIndex=0;
-        save(); saveQueue(); renderLeads(); updateFilterResorts();
+        save(); saveQueue(); renderLeads(); updateFilterResorts(); updateSmartQueueCount();
     }
 
     // ── UTILS ─────────────────────────────────────────────────────────────
-    function save() { localStorage.setItem(KEY_LEADS, JSON.stringify(leads)); }
+    function save()      { localStorage.setItem(KEY_LEADS, JSON.stringify(leads)); }
     function saveQueue() { localStorage.setItem(KEY_QUEUE, JSON.stringify(callQueue)); localStorage.setItem(KEY_INDEX, String(queueIndex)); }
     function closeModal(id) { document.getElementById(id).style.display='none'; }
-    function shuffle(arr) { return [...arr].sort(() => 0.5-Math.random()); }
+    function shuffle(arr)   { return [...arr].sort(() => 0.5-Math.random()); }
 
     function formatPhone(num) {
         const s = String(num).replace(/\D/g,'');
@@ -1066,13 +1757,13 @@
     const areaCodeToCity = {"201":"Jersey City, NJ","202":"Washington, DC","203":"Bridgeport, CT","205":"Birmingham, AL","206":"Seattle, WA","207":"Portland, ME","208":"Boise, ID","209":"Stockton, CA","210":"San Antonio, TX","212":"New York, NY","213":"Los Angeles, CA","214":"Dallas, TX","215":"Philadelphia, PA","216":"Cleveland, OH","217":"Springfield, IL","218":"Duluth, MN","219":"Hammond, IN","224":"Elgin, IL","225":"Baton Rouge, LA","228":"Gulfport, MS","229":"Albany, GA","231":"Muskegon, MI","234":"Akron, OH","239":"Cape Coral, FL","240":"Germantown, MD","248":"Troy, MI","251":"Mobile, AL","252":"Greenville, NC","253":"Tacoma, WA","254":"Killeen, TX","256":"Huntsville, AL","260":"Fort Wayne, IN","262":"Kenosha, WI","267":"Philadelphia, PA","269":"Kalamazoo, MI","270":"Bowling Green, KY","272":"Scranton, PA","276":"Bristol, VA","281":"Houston, TX","301":"Germantown, MD","302":"Wilmington, DE","303":"Denver, CO","304":"Charleston, WV","305":"Miami, FL","307":"Cheyenne, WY","308":"Grand Island, NE","309":"Peoria, IL","310":"Santa Monica, CA","312":"Chicago, IL","313":"Detroit, MI","314":"St. Louis, MO","315":"Syracuse, NY","316":"Wichita, KS","317":"Indianapolis, IN","318":"Shreveport, LA","319":"Cedar Rapids, IA","320":"St. Cloud, MN","321":"Orlando, FL","323":"Los Angeles, CA","325":"Abilene, TX","330":"Akron, OH","331":"Aurora, IL","334":"Montgomery, AL","336":"Greensboro, NC","337":"Lafayette, LA","339":"Saugus, MA","347":"New York, NY","351":"Lowell, MA","352":"Gainesville, FL","360":"Vancouver, WA","361":"Corpus Christi, TX","385":"Salt Lake City, UT","386":"Palm Coast, FL","401":"Providence, RI","402":"Omaha, NE","404":"Atlanta, GA","405":"Oklahoma City, OK","406":"Billings, MT","407":"Orlando, FL","408":"San Jose, CA","409":"Beaumont, TX","410":"Baltimore, MD","412":"Pittsburgh, PA","413":"Springfield, MA","414":"Milwaukee, WI","415":"San Francisco, CA","417":"Springfield, MO","419":"Toledo, OH","423":"Chattanooga, TN","424":"Santa Monica, CA","425":"Bellevue, WA","430":"Tyler, TX","432":"Midland, TX","434":"Lynchburg, VA","435":"St. George, UT","440":"Parma, OH","442":"Oceanside, CA","443":"Baltimore, MD","458":"Eugene, OR","469":"Dallas, TX","470":"Atlanta, GA","475":"Bridgeport, CT","478":"Macon, GA","479":"Fort Smith, AR","480":"Mesa, AZ","484":"Allentown, PA","501":"Little Rock, AR","502":"Louisville, KY","503":"Portland, OR","504":"New Orleans, LA","505":"Albuquerque, NM","507":"Rochester, MN","508":"Worcester, MA","509":"Spokane, WA","510":"Oakland, CA","512":"Austin, TX","513":"Cincinnati, OH","515":"Des Moines, IA","516":"Hempstead, NY","517":"Lansing, MI","518":"Albany, NY","520":"Tucson, AZ","530":"Redding, CA","531":"Omaha, NE","534":"Eau Claire, WI","539":"Tulsa, OK","540":"Roanoke, VA","541":"Eugene, OR","551":"Jersey City, NJ","559":"Fresno, CA","561":"West Palm Beach, FL","562":"Long Beach, CA","563":"Davenport, IA","567":"Toledo, OH","570":"Scranton, PA","571":"Arlington, VA","573":"Columbia, MO","574":"South Bend, IN","575":"Las Cruces, NM","585":"Rochester, NY","586":"Warren, MI","601":"Jackson, MS","602":"Phoenix, AZ","603":"Manchester, NH","605":"Sioux Falls, SD","606":"Ashland, KY","607":"Binghamton, NY","608":"Madison, WI","609":"Trenton, NJ","610":"Allentown, PA","612":"Minneapolis, MN","614":"Columbus, OH","615":"Nashville, TN","616":"Grand Rapids, MI","617":"Boston, MA","618":"Belleville, IL","619":"San Diego, CA","620":"Hutchinson, KS","623":"Glendale, AZ","626":"Pasadena, CA","629":"Nashville, TN","630":"Aurora, IL","631":"Brentwood, NY","636":"O'Fallon, MO","641":"Mason City, IA","646":"New York, NY","650":"San Mateo, CA","651":"St. Paul, MN","657":"Anaheim, CA","660":"Sedalia, MO","661":"Bakersfield, CA","662":"Southaven, MS","667":"Baltimore, MD","669":"San Jose, CA","678":"Atlanta, GA","681":"Charleston, WV","682":"Fort Worth, TX","701":"Fargo, ND","702":"Las Vegas, NV","703":"Arlington, VA","704":"Charlotte, NC","706":"Augusta, GA","707":"Santa Rosa, CA","708":"Cicero, IL","712":"Sioux City, IA","713":"Houston, TX","714":"Anaheim, CA","715":"Eau Claire, WI","716":"Buffalo, NY","717":"Lancaster, PA","718":"New York, NY","719":"Colorado Springs, CO","720":"Denver, CO","724":"New Castle, PA","727":"St. Petersburg, FL","731":"Jackson, TN","732":"Edison, NJ","734":"Ann Arbor, MI","737":"Austin, TX","740":"Newark, OH","747":"Los Angeles, CA","754":"Fort Lauderdale, FL","757":"Virginia Beach, VA","760":"Oceanside, CA","762":"Augusta, GA","763":"Brooklyn Park, MN","765":"Muncie, IN","769":"Jackson, MS","770":"Atlanta, GA","772":"Port St. Lucie, FL","773":"Chicago, IL","774":"Worcester, MA","775":"Reno, NV","779":"Rockford, IL","781":"Waltham, MA","785":"Topeka, KS","786":"Miami, FL","801":"Salt Lake City, UT","802":"Burlington, VT","803":"Columbia, SC","804":"Richmond, VA","805":"Oxnard, CA","806":"Lubbock, TX","808":"Honolulu, HI","810":"Flint, MI","812":"Evansville, IN","813":"Tampa, FL","814":"Erie, PA","815":"Rockford, IL","816":"Kansas City, MO","817":"Fort Worth, TX","818":"Los Angeles, CA","828":"Asheville, NC","830":"New Braunfels, TX","831":"Salinas, CA","832":"Houston, TX","843":"Charleston, SC","845":"New City, NY","847":"Elgin, IL","848":"Edison, NJ","850":"Tallahassee, FL","854":"Charleston, SC","856":"Camden, NJ","857":"Boston, MA","858":"San Diego, CA","859":"Lexington, KY","860":"Hartford, CT","862":"Newark, NJ","863":"Lakeland, FL","864":"Greenville, SC","865":"Knoxville, TN","870":"Jonesboro, AR","872":"Chicago, IL","878":"Pittsburgh, PA","901":"Memphis, TN","903":"Tyler, TX","904":"Jacksonville, FL","907":"Anchorage, AK","908":"Elizabeth, NJ","909":"San Bernardino, CA","910":"Fayetteville, NC","912":"Savannah, GA","913":"Overland Park, KS","914":"Yonkers, NY","915":"El Paso, TX","916":"Sacramento, CA","917":"New York, NY","918":"Tulsa, OK","919":"Raleigh, NC","920":"Green Bay, WI","925":"Concord, CA","928":"Yuma, AZ","929":"New York, NY","931":"Clarksville, TN","936":"Conroe, TX","937":"Dayton, OH","938":"Huntsville, AL","940":"Denton, TX","941":"North Port, FL","947":"Troy, MI","949":"Irvine, CA","951":"Riverside, CA","952":"Bloomington, MN","954":"Fort Lauderdale, FL","956":"Laredo, TX","959":"Hartford, CT","970":"Fort Collins, CO","971":"Portland, OR","972":"Dallas, TX","973":"Newark, NJ","978":"Lowell, MA","979":"College Station, TX","980":"Charlotte, NC","984":"Raleigh, NC","985":"Houma, LA","989":"Saginaw, MI"};
 
     function getCityFromPhone(ph) {
-        const c = String(ph).replace(/\D/g,'');
+        const c  = String(ph).replace(/\D/g,'');
         const ac = c.length>=10 ? c.substring(c.length-10, c.length-7) : '';
         return areaCodeToCity[ac] || 'Unknown';
     }
 
     function getLocalTimeForLead(ph) {
-        const c = String(ph).replace(/\D/g,'');
+        const c  = String(ph).replace(/\D/g,'');
         const ac = c.length>=10 ? c.substring(c.length-10, c.length-7) : '';
         const zones = {
             'America/Chicago':['205','210','225','228','312','314','318','337','402','405','414','501','504','512','515','601','612','615','630','636','651','682','713','715','731','769','816','817','832','870','901','903','913','918','931','936','940','956','972','979','985'],
