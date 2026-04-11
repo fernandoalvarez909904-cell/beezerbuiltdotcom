@@ -1,1781 +1,708 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Workflow — Lead Organizer Pro (Twilio Edition)</title>
-    <script src="https://cdn.jsdelivr.net/npm/@twilio/voice-sdk@2.3.0/dist/twilio.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        :root {
-            --primary: #007bff;
-            --bg-body: #f0f4f8;
-            --bg-panel: rgba(255,255,255,0.95);
-            --text-main: #333;
-            --border-color: rgba(209,217,224,0.6);
-            --success: #28a745;
-            --danger: #dc3545;
-            --warning: #f6ad55;
-        }
-        [data-theme="dark"] {
-            --bg-body: #1a202c;
-            --bg-panel: rgba(45,55,72,0.95);
-            --text-main: #e2e8f0;
-            --border-color: rgba(74,85,104,0.6);
-            --primary: #63b3ed;
-        }
-        * { box-sizing: border-box; }
-        body { font-family:'Inter',system-ui,sans-serif; margin:20px; background:var(--bg-body); color:var(--text-main); display:flex; height:calc(100vh - 40px); overflow:hidden; }
-        h1 { margin:0; color:var(--primary); font-size:1.8em; font-weight:700; }
-        h2 { margin:15px 0 10px; color:var(--primary); font-size:1.1em; font-weight:600; border-bottom:1px solid var(--border-color); padding-bottom:5px; }
-        label { font-size:0.75em; font-weight:600; color:var(--primary); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px; }
-        #main { flex:3; margin-right:20px; display:flex; flex-direction:column; overflow:hidden; }
-        #sidebar { flex:1; max-width:350px; background:var(--bg-panel); border:1px solid var(--border-color); border-radius:16px; padding:24px; display:flex; flex-direction:column; overflow:hidden; }
-        .panel { background:var(--bg-panel); border:1px solid var(--border-color); border-radius:16px; padding:16px; margin-bottom:16px; }
-        .stats-bar { display:flex; gap:12px; margin-bottom:16px; }
-        .stat-card { flex:1; background:var(--bg-panel); padding:16px; border-radius:12px; border:1px solid var(--border-color); text-align:center; }
-        .stat-val { display:block; font-size:1.6em; font-weight:700; color:var(--primary); }
-        .progress-container { width:100%; height:8px; background:rgba(226,232,240,0.5); border-radius:999px; margin-top:12px; overflow:hidden; }
-        .progress-fill { height:100%; width:0%; background:linear-gradient(135deg,#007bff,#63b3ed); transition:width .3s; }
-        .table-wrapper { flex:1; overflow:auto; background:var(--bg-panel); border-radius:16px; border:1px solid var(--border-color); }
-        table { width:100%; border-collapse:collapse; table-layout:fixed; min-width:1000px; }
-        th, td { padding:12px 16px; border-bottom:1px solid var(--border-color); font-size:0.85em; text-align:left; }
-        th { background:rgba(255,255,255,0.6); position:sticky; top:0; z-index:10; font-weight:600; cursor:pointer; }
-        [data-theme="dark"] th { background:rgba(45,55,72,0.6); }
-        tr:hover { background:rgba(0,123,255,0.08); cursor:pointer; }
-        tr.is-hidden-row { opacity:0.5; }
-        tr.no-connect { background:rgba(255,193,7,0.12) !important; }
-        tr.has-callback { background:rgba(16,185,129,0.08) !important; }
-        .icon-btn { background:var(--bg-panel); border:1px solid var(--border-color); color:var(--text-main); width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.2em; }
-        .btn-primary, .btn-warning, .btn-danger, .btn-vm { padding:10px 16px; border-radius:8px; font-weight:600; cursor:pointer; border:none; }
-        .btn-primary { background:linear-gradient(135deg,#007bff,#63b3ed); color:#fff; }
-        .btn-warning { background:linear-gradient(135deg,#f6ad55,#ed8936); color:#111; }
-        .btn-danger { background:linear-gradient(135deg,#dc3545,#c53030); color:#fff; }
-        .btn-vm { background:linear-gradient(135deg,#6b46c1,#9f7aea); color:white; }
-        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:3000; }
-        .modal-content { background:var(--bg-panel); width:90%; max-width:520px; margin:5vh auto; padding:32px; border-radius:16px; border:1px solid var(--border-color); max-height:90vh; overflow-y:auto; }
-        .badge { font-size:0.85em; padding:4px 10px; border-radius:999px; display:inline-block; }
-        .city-badge { background:rgba(0,123,255,0.1); color:var(--primary); }
-        .resort-badge { background:rgba(40,167,69,0.1); color:#28a745; }
-        .call-badge { background:rgba(254,226,226,0.5); color:#991b1b; }
-        .queue-bar { background:linear-gradient(135deg,#007bff,#63b3ed); color:white; padding:12px 24px; border-radius:16px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; }
-        .dialer-name { font-size:2em; font-weight:700; cursor:pointer; }
-        input[type=text], input[type=number], input[type=datetime-local], input[type=email], select, textarea { width:100%; padding:12px; margin-bottom:16px; border:1px solid var(--border-color); border-radius:12px; background:rgba(255,255,255,0.6); color:var(--text-main); font-family:inherit; font-size:0.9em; }
-        [data-theme="dark"] input, [data-theme="dark"] select, [data-theme="dark"] textarea { background:rgba(45,55,72,0.6); }
-        .status-dot { display:inline-block; width:10px; height:10px; border-radius:50%; background:#dc3545; margin-right:5px; }
-        .status-dot.online { background:#10b981; }
-        .log-entry { padding:8px; border-radius:8px; margin-bottom:5px; font-size:0.8em; cursor:pointer; background:rgba(0,123,255,0.05); }
-        .log-entry:hover { background:rgba(0,123,255,0.12); }
-        .dtmf-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:10px 0; }
-        .dtmf-btn { padding:12px; font-size:1.2em; font-weight:700; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-panel); color:var(--text-main); cursor:pointer; }
-        .dtmf-btn:hover { background:rgba(0,123,255,0.1); }
-        .dtmf-btn:active { transform:scale(0.95); }
-        .quick-note-btn { padding:6px 10px; font-size:0.75em; font-weight:600; border:1px solid var(--border-color); border-radius:6px; background:var(--bg-panel); color:var(--text-main); cursor:pointer; margin:3px; }
-        .quick-note-btn:hover { background:rgba(0,123,255,0.1); }
-        .call-timer { font-size:1.4em; font-weight:700; color:#10b981; text-align:center; margin:8px 0; font-family:monospace; }
-        .callback-alert { background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.4); border-radius:10px; padding:10px 14px; margin-bottom:8px; font-size:0.82em; cursor:pointer; }
-        .callback-alert:hover { background:rgba(16,185,129,0.2); }
-        /* Draggable dialer */
-        #dialerModal { background:transparent !important; pointer-events:none; }
-        #dialerModal .modal-content { pointer-events:all; position:fixed; top:5vh; left:50%; transform:translateX(-50%); margin:0; max-height:92vh; }
-        #dialerDragHandle { background:linear-gradient(135deg,#007bff,#63b3ed); color:white; padding:8px 16px; border-radius:12px 12px 0 0; margin:-32px -32px 16px -32px; cursor:grab; user-select:none; font-size:0.8em; font-weight:600; display:flex; align-items:center; justify-content:space-between; }
-        #dialerDragHandle:active { cursor:grabbing; }
-        /* Recording button */
-        .btn-record { padding:8px 14px; border-radius:8px; font-weight:600; cursor:pointer; border:none; background:linear-gradient(135deg,#dc3545,#c53030); color:white; display:flex; align-items:center; gap:6px; }
-        .btn-record.recording { background:linear-gradient(135deg,#991b1b,#7f1d1d); animation:pulse-red 1s infinite; }
-        @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:0.7} }
-        .recording-entry { background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:10px; margin-bottom:8px; font-size:0.82em; display:flex; align-items:center; gap:8px; }
-        .recording-entry audio { flex:1; height:32px; }
-        /* Audio test */
-        .audio-tip { background:rgba(0,123,255,0.06); border-left:3px solid var(--primary); padding:10px 14px; border-radius:0 8px 8px 0; margin-bottom:10px; font-size:0.85em; line-height:1.6; }
-        .audio-tip.warn { border-left-color:#f6ad55; background:rgba(246,173,85,0.08); }
-        .audio-tip.good { border-left-color:#10b981; background:rgba(16,185,129,0.08); }
-        /* Smart queue badge */
-        .smart-count { background:rgba(255,255,255,0.3); border-radius:6px; padding:2px 7px; font-size:0.8em; font-weight:700; margin-left:6px; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Soul Faith — Official Website</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    :root {
+      --bg:        #0a0a0a;
+      --surface:   #141414;
+      --accent:    #c8a84b;
+      --accent2:   #8b1a1a;
+      --text:      #e8e8e8;
+      --muted:     #888;
+      --font-head: 'Bebas Neue', sans-serif;
+      --font-body: 'Barlow', sans-serif;
+      --transition: 0.6s cubic-bezier(0.77, 0, 0.175, 1);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font-body); overflow-x: hidden; }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; color: inherit; }
+
+    /* PAGE TRANSITIONS */
+    .page { position: fixed; inset: 0; overflow-y: auto; opacity: 0; pointer-events: none; transform: translateY(30px); transition: opacity var(--transition), transform var(--transition); z-index: 1; }
+    .page.active { opacity: 1; pointer-events: all; transform: translateY(0); z-index: 2; }
+
+    /* NAVBAR */
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; display: flex; align-items: center; justify-content: space-between; padding: 18px 40px; background: linear-gradient(to bottom, rgba(0,0,0,0.92), transparent); }
+    .nav-logo { font-family: var(--font-head); font-size: 2rem; letter-spacing: 4px; color: var(--accent); cursor: pointer; }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a { font-size: 0.8rem; letter-spacing: 3px; text-transform: uppercase; color: var(--text); transition: color 0.3s; }
+    .nav-links a:hover { color: var(--accent); }
+    .nav-right { display: flex; align-items: center; gap: 14px; }
+    .nav-social a { font-size: 1rem; color: var(--muted); transition: color 0.3s; margin-left: 10px; }
+    .nav-social a:hover { color: var(--accent); }
+    .lang-toggle { display: flex; gap: 6px; font-size: 0.75rem; }
+    .lang-toggle button { padding: 4px 10px; border: 1px solid var(--muted); color: var(--muted); border-radius: 2px; transition: all 0.3s; }
+    .lang-toggle button.active { border-color: var(--accent); color: var(--accent); }
+
+    /* SECTION TITLE */
+    .section-title { font-family: var(--font-head); font-size: 2.5rem; letter-spacing: 6px; color: var(--accent); text-align: center; margin-bottom: 40px; }
+
+    /* HERO */
+    #page-home { min-height: 100vh; }
+    .hero-bg { position: relative; height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .hero-bg::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.55); }
+    .hero-video-wrapper { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .hero-video-wrapper iframe { position: absolute; top: 50%; left: 50%; width: 100vw; height: 56.25vw; min-height: 100vh; min-width: 177.77vh; transform: translate(-50%, -50%); }
+    .hero-content { position: relative; z-index: 2; text-align: center; padding: 0 20px; }
+    .hero-tagline { font-size: 0.8rem; letter-spacing: 6px; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+    .hero-title { font-family: var(--font-head); font-size: clamp(4rem, 12vw, 10rem); letter-spacing: 10px; line-height: 1; color: #fff; }
+
+    /* COUNTDOWN */
+    .countdown-section { display: flex; flex-direction: column; align-items: center; padding: 60px 20px 40px; background: var(--surface); }
+    .countdown-label { font-size: 0.7rem; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+    .countdown-event-name { font-family: var(--font-head); font-size: 1.4rem; letter-spacing: 4px; color: var(--text); padding-bottom: 24px; }
+    .countdown-blocks { display: flex; gap: 20px; }
+    .countdown-block { text-align: center; min-width: 80px; }
+    .countdown-number { font-family: var(--font-head); font-size: 3.5rem; color: var(--accent); line-height: 1; }
+    .countdown-unit { font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+
+    /* CAROUSEL */
+    .carousel-section { padding: 60px 0; overflow: hidden; }
+    .carousel-track { display: flex; gap: 16px; animation: scroll-carousel 30s linear infinite; width: max-content; }
+    .carousel-track:hover { animation-play-state: paused; }
+    .carousel-item { width: 320px; height: 220px; background: var(--surface); border: 1px solid #222; flex-shrink: 0; overflow: hidden; }
+    .carousel-item img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
+    .carousel-item:hover img { transform: scale(1.05); }
+    @keyframes scroll-carousel { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+    /* MUSIC PLAYER */
+    .player-section { padding: 60px 40px; background: var(--surface); border-top: 1px solid #222; border-bottom: 1px solid #222; }
+    .music-embed { max-width: 700px; margin: 0 auto; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; height: 352px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.85rem; letter-spacing: 2px; }
+
+    /* VIDEO GALLERY */
+    .video-section { padding: 60px 40px; }
+    .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; max-width: 1100px; margin: 0 auto; }
+    .video-thumb { position: relative; aspect-ratio: 16/9; background: #1a1a1a; border: 1px solid #222; cursor: pointer; overflow: hidden; transition: border-color 0.3s, transform 0.3s; }
+    .video-thumb:hover { border-color: var(--accent); transform: translateY(-3px); }
+    .video-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
+    .video-thumb:hover img { transform: scale(1.05); }
+    .video-play-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); }
+    .video-play-icon i { font-size: 3rem; color: rgba(255,255,255,0.85); }
+    .video-title { padding: 10px 12px; font-size: 0.8rem; letter-spacing: 1px; color: var(--muted); background: var(--surface); }
+    .video-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 3000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.4s; }
+    .video-modal-overlay.open { opacity: 1; pointer-events: all; }
+    .video-modal-box { position: relative; width: 90%; max-width: 900px; aspect-ratio: 16/9; }
+    .video-modal-close { position: absolute; top: -40px; right: 0; font-size: 1.5rem; color: var(--muted); cursor: pointer; transition: color 0.3s; }
+    .video-modal-close:hover { color: var(--accent); }
+    .video-modal-box iframe { width: 100%; height: 100%; border: none; }
+
+    /* SOCIAL FEED */
+    .social-feed-section { padding: 60px 40px; }
+    .social-feed-grid { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .social-feed-placeholder { aspect-ratio: 1; background: var(--surface); border: 1px dashed #333; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.75rem; letter-spacing: 2px; }
+
+    /* DONATE */
+    .donate-section { padding: 30px 40px; text-align: center; }
+    .donate-btn { display: inline-flex; align-items: center; gap: 10px; padding: 12px 28px; border: 1px solid var(--accent); color: var(--accent); font-size: 0.85rem; letter-spacing: 3px; text-transform: uppercase; transition: all 0.3s; }
+    .donate-btn:hover { background: var(--accent); color: var(--bg); }
+
+    /* ABOUT */
+    #page-about { padding: 120px 40px 80px; min-height: 100vh; }
+    .about-band-bio { max-width: 800px; margin: 0 auto 80px; text-align: center; }
+    .about-band-bio p { font-size: 1.05rem; line-height: 1.9; color: var(--muted); }
+    .members-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; max-width: 1000px; margin: 0 auto; }
+    .member-card { background: var(--surface); border: 1px solid #222; cursor: pointer; overflow: hidden; transition: border-color 0.3s, transform 0.3s; }
+    .member-card:hover { border-color: var(--accent); transform: translateY(-4px); }
+    .member-photo { width: 100%; aspect-ratio: 3/4; background: #1a1a1a; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .member-photo img { width: 100%; height: 100%; object-fit: cover; }
+    .member-photo i { font-size: 4rem; color: #2a2a2a; }
+    .member-info { padding: 16px; }
+    .member-name { font-family: var(--font-head); font-size: 1.4rem; letter-spacing: 3px; color: var(--accent); }
+    .member-role { font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.4s; }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-box { background: var(--surface); border: 1px solid var(--accent); max-width: 520px; width: 90%; padding: 48px; position: relative; transform: translateY(20px); transition: transform 0.4s; }
+    .modal-overlay.open .modal-box { transform: translateY(0); }
+    .modal-close { position: absolute; top: 16px; right: 20px; font-size: 1.5rem; color: var(--muted); cursor: pointer; transition: color 0.3s; }
+    .modal-close:hover { color: var(--accent); }
+    .modal-name { font-family: var(--font-head); font-size: 2.2rem; letter-spacing: 4px; color: var(--accent); margin-bottom: 6px; }
+    .modal-role { font-size: 0.75rem; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 24px; }
+    .modal-bio { font-size: 0.95rem; line-height: 1.8; color: #ccc; }
+
+    /* TOURS */
+    #page-tours { padding: 120px 40px 80px; min-height: 100vh; }
+    .week-calendar { max-width: 800px; margin: 0 auto 60px; }
+    .week-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .week-nav-btn { padding: 8px 20px; border: 1px solid var(--accent); color: var(--accent); font-size: 0.8rem; letter-spacing: 2px; transition: all 0.3s; }
+    .week-nav-btn:hover { background: var(--accent); color: var(--bg); }
+    .week-title { font-family: var(--font-head); font-size: 1.4rem; letter-spacing: 4px; color: var(--text); }
+    .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .week-day { background: var(--surface); border: 1px solid #222; padding: 12px 8px; text-align: center; min-height: 90px; }
+    .week-day.today { border-color: var(--accent); }
+    .week-day.has-event { border-color: var(--accent2); }
+    .day-name { font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+    .day-number { font-family: var(--font-head); font-size: 1.6rem; color: var(--text); }
+    .day-event { font-size: 0.65rem; color: var(--accent2); margin-top: 4px; line-height: 1.3; }
+    .tour-dates-list { max-width: 800px; margin: 0 auto; }
+    .tour-date-item { display: flex; align-items: center; gap: 24px; padding: 20px 0; border-bottom: 1px solid #1e1e1e; }
+    .tour-date-date { font-family: var(--font-head); font-size: 1.8rem; color: var(--accent); min-width: 80px; }
+    .tour-date-info { flex: 1; }
+    .tour-date-venue { font-size: 1rem; font-weight: 600; }
+    .tour-date-city { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+    .tour-date-btn { padding: 8px 20px; border: 1px solid var(--accent); color: var(--accent); font-size: 0.75rem; letter-spacing: 2px; transition: all 0.3s; }
+    .tour-date-btn:hover { background: var(--accent); color: var(--bg); }
+    .no-dates { text-align: center; color: var(--muted); font-size: 0.85rem; letter-spacing: 2px; padding: 40px; border: 1px dashed #333; }
+
+    /* MERCH */
+    #page-merch { padding: 120px 40px 80px; min-height: 100vh; }
+    .merch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; max-width: 1100px; margin: 0 auto; }
+    .merch-card { background: var(--surface); border: 1px solid #222; transition: border-color 0.3s, transform 0.3s; cursor: pointer; }
+    .merch-card:hover { border-color: var(--accent); transform: translateY(-4px); }
+    .merch-image { width: 100%; aspect-ratio: 1; background: #1a1a1a; overflow: hidden; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.75rem; letter-spacing: 2px; }
+    .merch-image img { width: 100%; height: 100%; object-fit: cover; }
+    .merch-details { padding: 16px; }
+    .merch-name { font-family: var(--font-head); font-size: 1.3rem; letter-spacing: 2px; }
+    .merch-price { color: var(--accent); font-size: 0.9rem; margin-top: 4px; }
+    .merch-btn { display: block; width: 100%; padding: 10px; margin-top: 12px; border: 1px solid var(--accent); color: var(--accent); font-size: 0.75rem; letter-spacing: 2px; text-align: center; text-transform: uppercase; transition: all 0.3s; }
+    .merch-btn:hover { background: var(--accent); color: var(--bg); }
+    .merch-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2500; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.4s; }
+    .merch-modal-overlay.open { opacity: 1; pointer-events: all; }
+    .merch-modal-box { background: var(--surface); border: 1px solid var(--accent); max-width: 600px; width: 90%; padding: 32px; position: relative; display: flex; gap: 24px; align-items: flex-start; }
+    .merch-modal-img { width: 220px; flex-shrink: 0; }
+    .merch-modal-info { flex: 1; }
+    .merch-modal-close { position: absolute; top: 12px; right: 16px; font-size: 1.4rem; color: var(--muted); cursor: pointer; transition: color 0.3s; }
+    .merch-modal-close:hover { color: var(--accent); }
+    .merch-modal-name { font-family: var(--font-head); font-size: 2rem; letter-spacing: 3px; color: var(--accent); margin-bottom: 8px; }
+    .merch-modal-price { font-size: 1.2rem; margin-bottom: 20px; }
+    .merch-modal-btn { display: block; padding: 12px 24px; border: 1px solid var(--accent); color: var(--accent); font-size: 0.8rem; letter-spacing: 3px; text-transform: uppercase; transition: all 0.3s; text-align: center; }
+    .merch-modal-btn:hover { background: var(--accent); color: var(--bg); }
+
+    /* BOOKING */
+    #page-booking { padding: 120px 40px 80px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+    .booking-form-wrapper { width: 100%; max-width: 540px; }
+    .booking-step { display: none; }
+    .booking-step.active { display: block; }
+    .step-indicator { display: flex; gap: 8px; margin-bottom: 40px; justify-content: center; }
+    .step-dot { width: 8px; height: 8px; border-radius: 50%; background: #333; transition: background 0.3s; }
+    .step-dot.done { background: var(--accent); }
+    .booking-question { font-family: var(--font-head); font-size: 1.8rem; letter-spacing: 3px; color: var(--accent); margin-bottom: 24px; }
+    .booking-input { width: 100%; background: var(--surface); border: 1px solid #333; color: var(--text); padding: 14px 18px; font-family: var(--font-body); font-size: 1rem; outline: none; transition: border-color 0.3s; margin-bottom: 14px; }
+    .booking-input:focus { border-color: var(--accent); }
+    textarea.booking-input { resize: vertical; min-height: 100px; }
+    .consent-label { display: flex; align-items: flex-start; gap: 12px; font-size: 0.8rem; color: var(--muted); line-height: 1.5; margin-bottom: 24px; }
+    .consent-label input { margin-top: 3px; accent-color: var(--accent); }
+    .booking-next-btn, .booking-submit-btn { display: block; width: 100%; padding: 16px; background: var(--accent); color: var(--bg); font-family: var(--font-head); font-size: 1.2rem; letter-spacing: 4px; text-transform: uppercase; transition: opacity 0.3s; }
+    .booking-next-btn:hover, .booking-submit-btn:hover { opacity: 0.85; }
+    .booking-back-btn { display: block; width: 100%; padding: 12px; border: 1px solid #333; color: var(--muted); font-size: 0.8rem; letter-spacing: 3px; text-transform: uppercase; margin-top: 10px; transition: all 0.3s; }
+    .booking-back-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .booking-success { display: none; text-align: center; padding: 60px 20px; }
+    .booking-success.show { display: block; }
+    .booking-success h2 { font-family: var(--font-head); font-size: 2.5rem; letter-spacing: 5px; color: var(--accent); margin-bottom: 16px; }
+    .booking-success p { color: var(--muted); line-height: 1.7; }
+
+    /* FOOTER */
+    footer { background: #050505; border-top: 1px solid #1a1a1a; padding: 40px; text-align: center; }
+    .footer-logo { font-family: var(--font-head); font-size: 2rem; letter-spacing: 6px; color: var(--accent); margin-bottom: 16px; }
+    .footer-social { display: flex; justify-content: center; gap: 20px; margin-bottom: 20px; }
+    .footer-social a { color: var(--muted); font-size: 1.1rem; transition: color 0.3s; }
+    .footer-social a:hover { color: var(--accent); }
+    .footer-links { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+    .footer-links a:hover { color: var(--accent); }
+    .footer-copy { font-size: 0.65rem; letter-spacing: 1px; color: #444; }
+
+    /* COOKIE BANNER */
+    #cookie-banner { position: fixed; bottom: 0; left: 0; right: 0; z-index: 9000; background: #111; border-top: 1px solid #2a2a2a; padding: 16px 40px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+    #cookie-banner p { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+    #cookie-banner p a { color: var(--accent); text-decoration: underline; }
+    .cookie-accept { padding: 10px 24px; background: var(--accent); color: var(--bg); font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; white-space: nowrap; transition: opacity 0.3s; }
+    .cookie-accept:hover { opacity: 0.85; }
+
+    @media (max-width: 768px) {
+      nav { padding: 14px 20px; }
+      .nav-links { display: none; }
+      .merch-modal-box { flex-direction: column; }
+      .merch-modal-img { width: 100%; }
+    }
+  </style>
 </head>
-<body data-theme="light">
+<body>
 
-<div id="main">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <h1>Workflow — Twilio Edition</h1>
-            <button onclick="startQueue()" class="icon-btn" style="background:var(--primary);color:white;width:auto;padding:0 15px;gap:8px;font-size:0.9em;border:none;">🔀 Start Call Queue</button>
-            <button onclick="startSmartQueue()" class="icon-btn" id="smartQueueBtn" style="background:#10b981;color:white;width:auto;padding:0 15px;gap:8px;font-size:0.9em;border:none;">🕐 Smart Queue <span id="smartQueueCount" class="smart-count">0</span></button>
-            <button onclick="openAddLeadModal()" class="icon-btn" style="background:#6b46c1;color:white;width:auto;padding:0 15px;gap:8px;font-size:0.9em;border:none;">➕ Add Lead</button>
-            <button onclick="openManualDialModal()" class="icon-btn" style="background:#ed8936;color:white;width:auto;padding:0 15px;gap:8px;font-size:0.9em;border:none;">📞 Manual Dial</button>
-            <button onclick="openAudioTestModal()" class="icon-btn" style="background:#718096;color:white;width:auto;padding:0 15px;gap:8px;font-size:0.9em;border:none;">🎙️ Audio Test</button>
+  <!-- NAVBAR -->
+  <nav>
+    <div class="nav-logo" onclick="showPage('home')">SOUL FAITH</div>
+    <ul class="nav-links">
+      <li><a href="#" onclick="return showPage('home')"    data-lang-en="Home"    data-lang-es="Inicio">Home</a></li>
+      <li><a href="#" onclick="return showPage('about')"   data-lang-en="About"   data-lang-es="Nosotros">About</a></li>
+      <li><a href="#" onclick="return showPage('tours')"   data-lang-en="Tours"   data-lang-es="Giras">Tours</a></li>
+      <li><a href="#" onclick="return showPage('merch')"   data-lang-en="Merch"   data-lang-es="Merch">Merch</a></li>
+      <li><a href="#" onclick="return showPage('videos')"  data-lang-en="Videos"  data-lang-es="Videos">Videos</a></li>
+      <li><a href="#" onclick="return showPage('booking')" data-lang-en="Booking" data-lang-es="Reservas">Booking</a></li>
+    </ul>
+    <div class="nav-right">
+      <div class="lang-toggle">
+        <button id="btn-en" class="active" onclick="setLang('en')">EN</button>
+        <button id="btn-es"               onclick="setLang('es')">ES</button>
+      </div>
+      <div class="nav-social">
+        <a href="https://www.instagram.com/soulfaithmx"        target="_blank" title="Instagram"><i class="fab fa-instagram"></i></a>
+        <a href="https://www.facebook.com/soulfaithmx"         target="_blank" title="Facebook"><i class="fab fa-facebook"></i></a>
+        <a href="https://youtube.com/@jou8aaxel"               target="_blank" title="YouTube"><i class="fab fa-youtube"></i></a>
+        <a href="https://www.tiktok.com/@soulfaithoficial"     target="_blank" title="TikTok"><i class="fab fa-tiktok"></i></a>
+        <a href="https://twitter.com/soulfaithmx"              target="_blank" title="X / Twitter"><i class="fab fa-x-twitter"></i></a>
+        <a href="https://wa.me/526871264099"                   target="_blank" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MEMBER BIO MODAL -->
+  <div class="modal-overlay" id="memberModal" onclick="closeMemberModal(event)">
+    <div class="modal-box">
+      <span class="modal-close" onclick="closeMemberModal(null)">✕</span>
+      <div class="modal-name" id="modal-name"></div>
+      <div class="modal-role" id="modal-role"></div>
+      <div class="modal-bio"  id="modal-bio"></div>
+    </div>
+  </div>
+
+  <!-- MERCH ZOOM MODAL -->
+  <div class="merch-modal-overlay" id="merchModal" onclick="closeMerchModal(event)">
+    <div class="merch-modal-box">
+      <span class="merch-modal-close" onclick="closeMerchModal(null)">✕</span>
+      <div class="merch-modal-img" id="merch-modal-img-wrap"></div>
+      <div class="merch-modal-info">
+        <div class="merch-modal-name"  id="merch-modal-name"></div>
+        <div class="merch-modal-price" id="merch-modal-price"></div>
+        <a href="#" class="merch-modal-btn" id="merch-modal-btn">Buy Now</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIDEO MODAL -->
+  <div class="video-modal-overlay" id="videoModal" onclick="closeVideoModal(event)">
+    <div class="video-modal-box">
+      <span class="video-modal-close" onclick="closeVideoModal(null)">✕</span>
+      <iframe id="video-modal-iframe" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+  </div>
+
+
+  <!-- PAGE: HOME -->
+  <div class="page active" id="page-home">
+    <div class="hero-bg">
+      <div class="hero-video-wrapper">
+        <!--
+          TODO: Get a video ID from youtube.com/@jou8aaxel
+          Click any video → copy the ID from the URL after ?v=
+          Then replace both instances of VIDEO_ID below
+        -->
+        <iframe src="https://www.youtube.com/embed/VIDEO_ID?autoplay=1&mute=1&loop=1&playlist=VIDEO_ID&controls=0&rel=0"
+          allow="autoplay; encrypted-media" frameborder="0"></iframe>
+      </div>
+      <div class="hero-content">
+        <div class="hero-tagline" data-lang-en="Official Website — Guasave, Sinaloa, MX" data-lang-es="Sitio Oficial — Guasave, Sinaloa, MX">
+          Official Website — Guasave, Sinaloa, MX
         </div>
-        <button onclick="toggleTheme()" id="themeBtn" style="width:50px;height:50px;border-radius:50%;border:1px solid var(--border-color);font-size:1.5em;background:var(--bg-panel);cursor:pointer;">🌞</button>
+        <h1 class="hero-title">SOUL FAITH</h1>
+      </div>
     </div>
 
-    <div id="activeQueueBar" class="queue-bar" style="display:none;">
-        <div><span id="queueProgress">Playing 1 of 100</span> — <span id="queueCurrentName">...</span></div>
-        <div style="display:flex;gap:10px;">
-            <button onclick="openDialerModal()" style="padding:5px 12px;border-radius:6px;font-weight:bold;background:white;color:var(--primary);">Open Dialer</button>
-            <button onclick="stopQueue()" style="padding:5px 12px;border-radius:6px;font-weight:bold;background:var(--danger);color:white;">End Session</button>
-        </div>
+    <div class="countdown-section">
+      <div class="countdown-label" data-lang-en="Next Show" data-lang-es="Próximo Show">Next Show</div>
+      <div class="countdown-event-name" id="countdown-event-name"></div>
+      <div class="countdown-blocks">
+        <div class="countdown-block"><div class="countdown-number" id="cd-days">00</div><div class="countdown-unit" data-lang-en="Days" data-lang-es="Días">Days</div></div>
+        <div class="countdown-block"><div class="countdown-number" id="cd-hours">00</div><div class="countdown-unit" data-lang-en="Hours" data-lang-es="Horas">Hours</div></div>
+        <div class="countdown-block"><div class="countdown-number" id="cd-minutes">00</div><div class="countdown-unit" data-lang-en="Min" data-lang-es="Min">Min</div></div>
+        <div class="countdown-block"><div class="countdown-number" id="cd-seconds">00</div><div class="countdown-unit" data-lang-en="Sec" data-lang-es="Seg">Sec</div></div>
+      </div>
     </div>
 
-    <div class="stats-bar">
-        <div class="stat-card"><span id="statTotal" class="stat-val">0</span><div style="font-size:0.7em;color:#718096;">Total Leads</div></div>
-        <div class="stat-card"><span id="statCalled" class="stat-val">0</span><div style="font-size:0.7em;color:#718096;">Called Leads</div></div>
-        <div class="stat-card"><span id="statCallsToday" class="stat-val">0</span><div style="font-size:0.7em;color:#718096;">Total Logs</div></div>
-        <div class="stat-card"><span id="statZeroDial" class="stat-val">0</span><div style="font-size:0.7em;color:var(--success);">Zero-Dial Left</div></div>
+    <div class="carousel-section">
+      <div class="carousel-track" id="carousel-track">
+        <!-- TODO: Replace with <img src="..."> tags once gig photos are hosted -->
+        <div class="carousel-item"><div style="width:100%;height:100%;background:#1c1c1c;display:flex;align-items:center;justify-content:center;color:#333;font-size:.7rem;letter-spacing:2px">GIG PHOTO</div></div>
+        <div class="carousel-item"><div style="width:100%;height:100%;background:#1c1c1c;display:flex;align-items:center;justify-content:center;color:#333;font-size:.7rem;letter-spacing:2px">GIG PHOTO</div></div>
+        <div class="carousel-item"><div style="width:100%;height:100%;background:#1c1c1c;display:flex;align-items:center;justify-content:center;color:#333;font-size:.7rem;letter-spacing:2px">GIG PHOTO</div></div>
+        <div class="carousel-item"><div style="width:100%;height:100%;background:#1c1c1c;display:flex;align-items:center;justify-content:center;color:#333;font-size:.7rem;letter-spacing:2px">GIG PHOTO</div></div>
+        <div class="carousel-item"><div style="width:100%;height:100%;background:#1c1c1c;display:flex;align-items:center;justify-content:center;color:#333;font-size:.7rem;letter-spacing:2px">GIG PHOTO</div></div>
+        <div class="carousel-item"><div style="width:100%;height:100%;background:#1c1c1c;display:flex;align-items:center;justify-content:center;color:#333;font-size:.7rem;letter-spacing:2px">GIG PHOTO</div></div>
+      </div>
     </div>
 
-    <div class="panel" style="padding:10px 15px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-            <span id="progressLabel" style="font-size:0.75em;font-weight:bold;color:var(--primary);">LIST PROGRESS: 0%</span>
-            <span id="progressCount" style="font-size:0.75em;color:#718096;">0 / 0 Finished</span>
-        </div>
-        <div class="progress-container"><div id="progressBar" class="progress-fill"></div></div>
+    <div class="player-section">
+      <div class="section-title" data-lang-en="Listen" data-lang-es="Escucha">Listen</div>
+      <!-- TODO: Paste Spotify or SoundCloud embed iframe here -->
+      <div class="music-embed">[ MUSIC PLAYER — PASTE SPOTIFY / SOUNDCLOUD EMBED HERE ]</div>
     </div>
 
-    <div class="panel">
-        <div style="display:flex;gap:10px;align-items:center;">
-            <input type="text" id="searchInput" placeholder="Search name or phone..." style="flex:1;margin-bottom:0;" oninput="currentPage=1;renderLeads();" />
-            <select id="resortFilter" onchange="currentPage=1;renderLeads();" style="width:150px;margin-bottom:0;"><option value="">All Resorts</option></select>
-            <label style="font-size:0.8em;color:var(--warning);margin-left:15px;white-space:nowrap;display:flex;align-items:center;gap:5px;">
-                <input type="checkbox" id="noConnectFilter" onchange="currentPage=1;renderLeads();" style="width:auto;padding:0;margin:0;"> Only No-Connect
-            </label>
-            <div style="position:relative;">
-                <button class="icon-btn" style="background:var(--primary);color:white;border:none;">📥</button>
-                <input type="file" id="fileInput" accept=".csv,.xls,.xlsx" style="position:absolute;left:0;top:0;opacity:0;width:100%;height:100%;cursor:pointer;" />
-            </div>
-        </div>
+    <div class="social-feed-section">
+      <div class="section-title" data-lang-en="Latest Posts" data-lang-es="Últimas Publicaciones">Latest Posts</div>
+      <!-- TODO: Replace grid with Elfsight or Behold.so Instagram embed widget -->
+      <div class="social-feed-grid">
+        <div class="social-feed-placeholder">POST 1</div>
+        <div class="social-feed-placeholder">POST 2</div>
+        <div class="social-feed-placeholder">POST 3</div>
+        <div class="social-feed-placeholder">POST 4</div>
+        <div class="social-feed-placeholder">POST 5</div>
+        <div class="social-feed-placeholder">POST 6</div>
+      </div>
     </div>
 
-    <div class="table-wrapper">
-        <table id="leadTable">
-            <thead>
-                <tr>
-                    <th onclick="sortBy('name')" style="width:18%;">Name ↕</th>
-                    <th onclick="sortBy('phone')" style="width:15%;">Phone ↕</th>
-                    <th style="width:12%;">Local Time</th>
-                    <th onclick="sortBy('city')" style="width:12%;">City ↕</th>
-                    <th onclick="sortBy('resort')" style="width:12%;">Resort ↕</th>
-                    <th onclick="sortBy('appointment')" style="width:15%;">Appointment ↕</th>
-                    <th style="width:16%;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="leadBody"></tbody>
-        </table>
-        <div style="display:flex;justify-content:center;gap:15px;padding:15px;background:rgba(0,0,0,0.02);border-top:1px solid var(--border-color);">
-            <button onclick="changePage(-1)" style="padding:5px 15px;border-radius:5px;background:var(--bg-panel);border:1px solid var(--border-color);cursor:pointer;">←</button>
-            <span id="pageInfo" style="font-size:0.85em;font-weight:bold;line-height:2;">Page 1</span>
-            <button onclick="changePage(1)" style="padding:5px 15px;border-radius:5px;background:var(--bg-panel);border:1px solid var(--border-color);cursor:pointer;">→</button>
-        </div>
+    <div class="donate-section">
+      <!-- TODO: Create Ko-fi or Buy Me a Coffee account for the band and update this link -->
+      <a href="https://ko-fi.com/soulfaith" target="_blank" class="donate-btn">
+        <i class="fas fa-coffee"></i>
+        <span data-lang-en="Support the Band" data-lang-es="Apoya a la Banda">Support the Band</span>
+      </a>
     </div>
-</div>
 
-<!-- ─── SIDEBAR ─────────────────────────────────────────────────────────── -->
-<div id="sidebar">
-    <div style="text-align:center;margin-bottom:20px;">
-        <div id="clock" style="font-size:1.8em;font-weight:bold;color:var(--primary);">00:00:00</div>
-        <div id="dateLabel" style="opacity:0.7;font-size:0.9em;"></div>
+    <footer>
+      <div class="footer-logo">SOUL FAITH</div>
+      <div class="footer-social">
+        <a href="https://www.instagram.com/soulfaithmx"    target="_blank"><i class="fab fa-instagram"></i></a>
+        <a href="https://www.facebook.com/soulfaithmx"     target="_blank"><i class="fab fa-facebook"></i></a>
+        <a href="https://youtube.com/@jou8aaxel"           target="_blank"><i class="fab fa-youtube"></i></a>
+        <a href="https://www.tiktok.com/@soulfaithoficial" target="_blank"><i class="fab fa-tiktok"></i></a>
+        <a href="https://twitter.com/soulfaithmx"          target="_blank"><i class="fab fa-x-twitter"></i></a>
+        <a href="https://wa.me/526871264099"               target="_blank"><i class="fab fa-whatsapp"></i></a>
+      </div>
+      <div class="footer-links">
+        <a href="#" data-lang-en="Privacy Policy" data-lang-es="Política de Privacidad">Privacy Policy</a>
+        <a href="#" data-lang-en="Terms of Use" data-lang-es="Términos de Uso">Terms of Use</a>
+        <a href="#" onclick="return showPage('booking')" data-lang-en="Booking" data-lang-es="Reservas">Booking</a>
+      </div>
+      <div class="footer-copy">© 2025 Soul Faith. All rights reserved.</div>
+    </footer>
+  </div>
+
+
+  <!-- PAGE: ABOUT -->
+  <div class="page" id="page-about">
+    <div style="padding-top:120px;">
+      <div class="section-title" data-lang-en="About Us" data-lang-es="Nosotros">About Us</div>
+      <div class="about-band-bio"><p id="band-bio-text"></p></div>
+      <div class="members-grid">
+        <div class="member-card" onclick="openMemberModal(0)">
+          <div class="member-photo"><i class="fas fa-user"></i><!-- TODO: <img src="photos/joel.jpg"> --></div>
+          <div class="member-info"><div class="member-name">JOEL HDEZ OCHOA</div><div class="member-role" data-lang-en="Lead Vocals" data-lang-es="Voz Principal">Lead Vocals</div></div>
+        </div>
+        <div class="member-card" onclick="openMemberModal(1)">
+          <div class="member-photo"><i class="fas fa-user"></i><!-- TODO: <img src="photos/omar.jpg"> --></div>
+          <div class="member-info"><div class="member-name">OMAR HDZ OCHOA</div><div class="member-role" data-lang-en="Lead Guitar" data-lang-es="Guitarra Requinto">Lead Guitar</div></div>
+        </div>
+        <div class="member-card" onclick="openMemberModal(2)">
+          <div class="member-photo"><i class="fas fa-user"></i><!-- TODO: <img src="photos/mokay.jpg"> --></div>
+          <div class="member-info"><div class="member-name">ALEJANDRO MOKAY</div><div class="member-role" data-lang-en="Rhythm Guitar" data-lang-es="Guitarra Rítmica">Rhythm Guitar</div></div>
+        </div>
+        <div class="member-card" onclick="openMemberModal(3)">
+          <div class="member-photo"><i class="fas fa-user"></i><!-- TODO: <img src="photos/enrique.jpg"> --></div>
+          <div class="member-info"><div class="member-name">ENRIQUE HDZ OCHOA</div><div class="member-role" data-lang-en="Drums" data-lang-es="Batería">Drums</div></div>
+        </div>
+      </div>
     </div>
-    <div style="flex:1;overflow-y:auto;">
-        <h2>📅 Upcoming Callbacks</h2>
-        <div id="callbackList"><div style="font-size:0.8em;color:#718096;">No callbacks scheduled.</div></div>
+    <footer style="margin-top:80px;"><div class="footer-logo">SOUL FAITH</div><div class="footer-copy">© 2025 Soul Faith. All rights reserved.</div></footer>
+  </div>
 
-        <h2 style="margin-top:20px;">Upcoming Appointments</h2>
-        <div id="appointmentList"></div>
 
-        <h2 style="margin-top:25px;color:#10b981;">Twilio Connection Status</h2>
-        <div style="background:rgba(16,185,129,0.08);padding:14px;border-radius:12px;font-size:0.85em;line-height:1.5;">
-            <div id="twilioStatusDisplay"><span class="status-dot"></span>Connecting to Server...</div>
-            <br>
-            5 active numbers • Automatic round-robin assignment<br>
-            Round-robin queues active • Exact 1,000-lead cycle<br>
-            <small>App SID: APe183b25ac1f6be1e3fe5a8640be3b109</small>
+  <!-- PAGE: TOURS -->
+  <div class="page" id="page-tours">
+    <div style="padding-top:120px;">
+      <div class="section-title" data-lang-en="Tour Dates" data-lang-es="Fechas de Gira">Tour Dates</div>
+      <div class="week-calendar">
+        <div class="week-header">
+          <button class="week-nav-btn" onclick="changeWeek(-1)">← PREV</button>
+          <div class="week-title" id="week-title"></div>
+          <button class="week-nav-btn" onclick="changeWeek(1)">NEXT →</button>
         </div>
-
-        <h2 style="margin-top:25px;">Call Log (Latest First)</h2>
-        <div id="callLogList" style="max-height:300px;overflow-y:auto;"></div>
+        <div class="week-grid" id="week-grid"></div>
+      </div>
+      <div class="tour-dates-list" id="tour-dates-list">
+        <div class="no-dates" data-lang-en="No upcoming shows. Check back soon!" data-lang-es="Sin fechas próximas. ¡Vuelve pronto!">No upcoming shows. Check back soon!</div>
+      </div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-top:15px;">
-        <button onclick="exportAnsweredLeads()" style="padding:12px;background:var(--success);color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;">📤 Export Answered Leads</button>
-        <button onclick="deleteAllLeads()" style="padding:8px;background:var(--danger);color:white;border:none;border-radius:8px;opacity:0.6;font-size:0.8em;cursor:pointer;">🗑️ Clear Workspace (Delete All)</button>
+    <footer style="margin-top:80px;"><div class="footer-logo">SOUL FAITH</div><div class="footer-copy">© 2025 Soul Faith. All rights reserved.</div></footer>
+  </div>
+
+
+  <!-- PAGE: MERCH -->
+  <div class="page" id="page-merch">
+    <div style="padding-top:120px;">
+      <div class="section-title" data-lang-en="Merch" data-lang-es="Mercancía">Merch</div>
+      <div class="merch-grid" id="merch-grid"></div>
     </div>
-</div>
+    <footer style="margin-top:80px;"><div class="footer-logo">SOUL FAITH</div><div class="footer-copy">© 2025 Soul Faith. All rights reserved.</div></footer>
+  </div>
 
-<!-- ─── DIALER MODAL (DRAGGABLE) ─────────────────────────────────────────── -->
-<div id="dialerModal" class="modal-overlay">
-    <div class="modal-content" style="max-width:500px;" id="dialerModalContent">
-        <div id="dialerDragHandle">
-            <span>☰ Drag to move</span>
-            <span id="dialerProgress" style="font-size:0.9em;">LEAD 1 OF 100</span>
-        </div>
-        <div style="text-align:center;">
-            <div id="dialerName" class="dialer-name" onclick="openProfileFromDialer()">John Doe</div>
-            <div id="dialerTime" style="font-size:1.2em;font-weight:600;color:var(--warning);margin-bottom:8px;"></div>
-            <div id="callTimerDisplay" class="call-timer" style="display:none;">00:00</div>
-            <div style="margin-bottom:10px;display:flex;justify-content:center;flex-wrap:wrap;gap:5px;">
-                <span id="dialerCity" class="badge city-badge">City</span>
-                <span id="dialerResort" class="badge resort-badge">Resort</span>
-                <span id="dialerCalls" class="badge call-badge">0 Calls</span>
-            </div>
-            <div style="text-align:center;margin:12px 0;padding:10px;background:rgba(16,185,129,0.08);border-radius:8px;font-size:1.05em;">
-                <strong>Twilio Caller ID:</strong>
-                <span id="twilioCallerId" style="font-family:monospace;color:#10b981;font-weight:700;">+1-XXX-XXX-XXXX</span>
-            </div>
-            <div style="margin-bottom:12px;">
-                <label>Choose Caller ID for this call:</label>
-                <select id="callerIdSelect" onchange="onCallerIdSelectChange()" style="margin-bottom:0;"></select>
-            </div>
-            <div id="dialerPhone" style="font-size:1.4em;margin-bottom:12px;letter-spacing:1.5px;"></div>
 
-            <div style="display:flex;gap:8px;margin-bottom:12px;">
-                <button id="mainDialButton" onclick="placeTwilioCallNow()" style="flex:1;padding:12px;background:linear-gradient(135deg,#10b981,#34d399);color:white;border:none;border-radius:8px;font-weight:700;font-size:1.05em;cursor:pointer;">
-                    📲 DIAL WITH ASSIGNED TWILIO NUMBER
-                </button>
-                <button id="recordBtn" onclick="toggleRecording()" class="btn-record" title="Record this call (saves locally to this lead)">
-                    🔴 Record
-                </button>
-            </div>
-            <div id="recordingStatus" style="display:none;font-size:0.8em;color:#dc3545;font-weight:600;margin-bottom:8px;text-align:left;">⏺ Recording... (will save to lead when you stop)</div>
-
-            <!-- DTMF KEYPAD -->
-            <div id="dtmfSection" style="display:none;margin-bottom:12px;border:1px solid var(--border-color);border-radius:12px;padding:12px;">
-                <div style="font-size:0.75em;font-weight:600;color:var(--primary);margin-bottom:8px;text-transform:uppercase;">Keypad — Press to Send Tone</div>
-                <div class="dtmf-pad">
-                    <button class="dtmf-btn" onclick="sendDTMF('1')">1</button>
-                    <button class="dtmf-btn" onclick="sendDTMF('2')">2</button>
-                    <button class="dtmf-btn" onclick="sendDTMF('3')">3</button>
-                    <button class="dtmf-btn" onclick="sendDTMF('4')">4</button>
-                    <button class="dtmf-btn" onclick="sendDTMF('5')">5</button>
-                    <button class="dtmf-btn" onclick="sendDTMF('6')">6</button>
-                    <button class="dtmf-btn" onclick="sendDTMF('7')">7</button>
-                    <button class="dtmf-btn" onclick="sendDTMF('8')">8</button>
-                    <button class="dtmf-btn" onclick="sendDTMF('9')">9</button>
-                    <button class="dtmf-btn" onclick="sendDTMF('*')">*</button>
-                    <button class="dtmf-btn" onclick="sendDTMF('0')">0</button>
-                    <button class="dtmf-btn" onclick="sendDTMF('#')">#</button>
-                </div>
-            </div>
-
-            <!-- CALLBACK SCHEDULER -->
-            <div style="margin-bottom:12px;border:1px solid var(--border-color);border-radius:12px;padding:12px;text-align:left;">
-                <div style="font-size:0.75em;font-weight:600;color:var(--primary);margin-bottom:8px;text-transform:uppercase;">📅 Schedule Callback</div>
-                <input type="datetime-local" id="callbackDateTime" style="margin-bottom:8px;" />
-                <button onclick="scheduleCallback()" style="width:100%;padding:8px;background:linear-gradient(135deg,#10b981,#34d399);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Set Callback Reminder</button>
-            </div>
-
-            <!-- QUICK NOTES -->
-            <div style="margin-bottom:8px;text-align:left;">
-                <div style="font-size:0.75em;font-weight:600;color:var(--primary);margin-bottom:6px;text-transform:uppercase;">Quick Notes</div>
-                <div>
-                    <button class="quick-note-btn" onclick="addQuickNote('Interested')">✅ Interested</button>
-                    <button class="quick-note-btn" onclick="addQuickNote('Not home')">🏠 Not home</button>
-                    <button class="quick-note-btn" onclick="addQuickNote('Wrong number')">❌ Wrong #</button>
-                    <button class="quick-note-btn" onclick="addQuickNote('Call back later')">🔄 Call back later</button>
-                    <button class="quick-note-btn" onclick="addQuickNote('Not interested')">🚫 Not interested</button>
-                    <button class="quick-note-btn" onclick="addQuickNote('Left voicemail')">📬 Left VM</button>
-                </div>
-            </div>
-
-            <label>Call Result Notes</label>
-            <textarea id="dialerNotes" style="width:100%;height:80px;" placeholder="Add details..."></textarea>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <button onclick="queueAction('call')" class="btn-primary">LOG CALL & NEXT</button>
-                <button onclick="queueAction('no_connect')" class="btn-warning">DIDN'T GO THROUGH & NEXT</button>
-                <button onclick="queueAction('vm')" class="btn-vm">LEFT VM & NEXT</button>
-                <button onclick="queueAction('delete')" class="btn-danger">DISCONNECTED / DEL</button>
-            </div>
-            <button onclick="closeModal('dialerModal')" style="width:100%;margin-top:15px;padding:10px;border-radius:8px;font-weight:bold;border:1px solid var(--border-color);background:none;cursor:pointer;">CLOSE DIALER</button>
-        </div>
+  <!-- PAGE: VIDEOS -->
+  <div class="page" id="page-videos">
+    <div style="padding-top:120px;">
+      <div class="section-title" data-lang-en="Videos" data-lang-es="Videos">Videos</div>
+      <div class="video-grid" id="video-grid"></div>
     </div>
-</div>
+    <footer style="margin-top:80px;"><div class="footer-logo">SOUL FAITH</div><div class="footer-copy">© 2025 Soul Faith. All rights reserved.</div></footer>
+  </div>
 
-<!-- ─── PROFILE MODAL ─────────────────────────────────────────────────────── -->
-<div id="profileModal" class="modal-overlay">
-    <div class="modal-content">
-        <h2 id="profileName"></h2>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
-            <div>
-                <label>Edit Name</label>
-                <input type="text" id="profileNameEdit" style="margin-bottom:0;" />
-            </div>
-            <div>
-                <label>Edit Phone</label>
-                <input type="text" id="profilePhoneEdit" style="margin-bottom:0;" />
-            </div>
-        </div>
-        <div id="profilePhone" style="font-size:1.35em;font-family:monospace;margin-bottom:10px;"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
-            <div><strong>City:</strong> <span id="profileCity"></span></div>
-            <div><strong>Resort:</strong> <span id="profileResort"></span></div>
-            <div><strong>Calls:</strong> <span id="profileCalls"></span></div>
-            <div><strong>Last:</strong> <span id="profileLast"></span></div>
-        </div>
-        <div style="margin-bottom:16px;padding:12px;background:rgba(16,185,129,0.08);border-radius:8px;text-align:center;">
-            <strong style="color:#10b981;">Assigned Twilio Dialer Number:</strong><br>
-            <span id="profileTwilioNumber" style="font-family:monospace;font-size:1.2em;color:#10b981;font-weight:700;"></span>
-        </div>
 
-        <button id="profileCallNowBtn" onclick="callFromProfile()" style="width:100%;margin-bottom:8px;padding:12px;background:linear-gradient(135deg,#10b981,#34d399);color:white;border:none;border-radius:8px;font-weight:700;font-size:1.05em;cursor:pointer;">📲 CALL NOW</button>
-        <div id="profileCallStatus" style="display:none;margin-bottom:12px;padding:10px;background:rgba(16,185,129,0.08);border-radius:8px;text-align:center;">
-            <div id="profileCallTimer" class="call-timer">00:00</div>
-            <span id="profileCallStatusText" style="font-weight:600;color:#10b981;">Connected</span>
-            <button onclick="hangUpFromProfile()" style="margin-left:12px;padding:5px 12px;background:var(--danger);color:white;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">🛑 Hang Up</button>
+  <!-- PAGE: BOOKING -->
+  <div class="page" id="page-booking">
+    <div class="section-title" style="margin-bottom:10px;" data-lang-en="Book Us" data-lang-es="Contrátanos">Book Us</div>
+    <p style="text-align:center;color:var(--muted);font-size:.85rem;letter-spacing:2px;margin-bottom:40px;"
+       data-lang-en="Fill out the form and we'll be in touch."
+       data-lang-es="Llena el formulario y nos comunicaremos contigo.">Fill out the form and we'll be in touch.</p>
+    <div class="booking-form-wrapper">
+      <div class="step-indicator">
+        <div class="step-dot done" id="dot-1"></div>
+        <div class="step-dot"     id="dot-2"></div>
+        <div class="step-dot"     id="dot-3"></div>
+        <div class="step-dot"     id="dot-4"></div>
+      </div>
+      <!-- TODO: Replace ACTION_URL with your Formspree endpoint from formspree.io -->
+      <form id="booking-form" action="ACTION_URL" method="POST">
+        <div class="booking-step active" id="step-1">
+          <div class="booking-question" data-lang-en="What's your name?" data-lang-es="¿Cuál es tu nombre?">What's your name?</div>
+          <input class="booking-input" type="text" name="name" placeholder="Full Name / Nombre Completo" required />
+          <button type="button" class="booking-next-btn" onclick="nextStep(2)" data-lang-en="Next →" data-lang-es="Siguiente →">Next →</button>
         </div>
-
-        <div id="profileDtmfSection" style="display:none;margin-bottom:12px;border:1px solid var(--border-color);border-radius:12px;padding:12px;">
-            <div style="font-size:0.75em;font-weight:600;color:var(--primary);margin-bottom:8px;text-transform:uppercase;">Keypad — Press to Send Tone</div>
-            <div class="dtmf-pad">
-                <button class="dtmf-btn" onclick="sendDTMF('1')">1</button>
-                <button class="dtmf-btn" onclick="sendDTMF('2')">2</button>
-                <button class="dtmf-btn" onclick="sendDTMF('3')">3</button>
-                <button class="dtmf-btn" onclick="sendDTMF('4')">4</button>
-                <button class="dtmf-btn" onclick="sendDTMF('5')">5</button>
-                <button class="dtmf-btn" onclick="sendDTMF('6')">6</button>
-                <button class="dtmf-btn" onclick="sendDTMF('7')">7</button>
-                <button class="dtmf-btn" onclick="sendDTMF('8')">8</button>
-                <button class="dtmf-btn" onclick="sendDTMF('9')">9</button>
-                <button class="dtmf-btn" onclick="sendDTMF('*')">*</button>
-                <button class="dtmf-btn" onclick="sendDTMF('0')">0</button>
-                <button class="dtmf-btn" onclick="sendDTMF('#')">#</button>
-            </div>
+        <div class="booking-step" id="step-2">
+          <div class="booking-question" data-lang-en="How can we reach you?" data-lang-es="¿Cómo te contactamos?">How can we reach you?</div>
+          <input class="booking-input" type="email" name="email" placeholder="Email" required />
+          <input class="booking-input" type="tel"   name="phone" placeholder="Phone / Teléfono" />
+          <button type="button" class="booking-next-btn" onclick="nextStep(3)" data-lang-en="Next →" data-lang-es="Siguiente →">Next →</button>
+          <button type="button" class="booking-back-btn" onclick="nextStep(1)" data-lang-en="← Back" data-lang-es="← Atrás">← Back</button>
         </div>
-
-        <label>Appointment</label><input type="datetime-local" id="profileAppt">
-        <label>Email</label><input type="text" id="profileEmail">
-
-        <div style="margin-bottom:16px;border:1px solid var(--border-color);border-radius:12px;padding:12px;">
-            <div style="font-size:0.75em;font-weight:600;color:var(--primary);margin-bottom:8px;text-transform:uppercase;">📅 Schedule Callback</div>
-            <input type="datetime-local" id="profileCallbackDateTime" style="margin-bottom:8px;" />
-            <button onclick="scheduleCallbackFromProfile()" style="width:100%;padding:8px;background:linear-gradient(135deg,#10b981,#34d399);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Set Callback Reminder</button>
+        <div class="booking-step" id="step-3">
+          <div class="booking-question" data-lang-en="Tell us about your event." data-lang-es="Cuéntanos sobre tu evento.">Tell us about your event.</div>
+          <input class="booking-input" type="text" name="event_type"  placeholder="Event Type / Tipo de Evento" />
+          <input class="booking-input" type="text" name="event_date"  placeholder="Date / Fecha" />
+          <input class="booking-input" type="text" name="event_venue" placeholder="Venue / Lugar" />
+          <button type="button" class="booking-next-btn" onclick="nextStep(4)" data-lang-en="Next →" data-lang-es="Siguiente →">Next →</button>
+          <button type="button" class="booking-back-btn" onclick="nextStep(2)" data-lang-en="← Back" data-lang-es="← Atrás">← Back</button>
         </div>
-
-        <!-- RECORDINGS -->
-        <div style="margin-bottom:16px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                <h2 style="margin:0;border:none;padding:0;font-size:1em;">🎙️ Call Recordings</h2>
-                <small style="color:#718096;font-size:0.78em;">Saved locally on your device</small>
-            </div>
-            <div id="profileRecordings"><div style="font-size:0.8em;color:#718096;">No recordings for this lead.</div></div>
+        <div class="booking-step" id="step-4">
+          <div class="booking-question" data-lang-en="Anything else?" data-lang-es="¿Algo más?">Anything else?</div>
+          <textarea class="booking-input" name="message" placeholder="Additional details / Detalles adicionales"></textarea>
+          <label class="consent-label">
+            <input type="checkbox" name="consent" required />
+            <span data-lang-en="I agree to be contacted by Soul Faith's management regarding booking inquiries."
+                  data-lang-es="Acepto ser contactado por la administración de Soul Faith en relación a solicitudes de reserva.">
+              I agree to be contacted by Soul Faith's management regarding booking inquiries.
+            </span>
+          </label>
+          <button type="submit" class="booking-submit-btn" data-lang-en="Send Request" data-lang-es="Enviar Solicitud">Send Request</button>
+          <button type="button" class="booking-back-btn" onclick="nextStep(3)" data-lang-en="← Back" data-lang-es="← Atrás">← Back</button>
         </div>
-
-        <h2 style="margin:12px 0;font-size:1.1em;">Email Templates</h2>
-        <div style="margin-bottom:8px;font-size:0.9em;">
-            <label style="display:block;margin:8px 0;text-transform:none;"><input type="checkbox" name="emailTemplate" value="inquiry" style="width:auto;padding:0;margin-right:6px;"> Initial Inquiry</label>
-            <label style="display:block;margin:8px 0;text-transform:none;"><input type="checkbox" name="emailTemplate" value="thankyou_quick" style="width:auto;padding:0;margin-right:6px;"> Thank You - Quick Response</label>
-            <label style="display:block;margin:8px 0;text-transform:none;"><input type="checkbox" name="emailTemplate" value="followup_long" style="width:auto;padding:0;margin-right:6px;"> Follow-Up - Long Delay</label>
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:16px;">
-            <button onclick="generateEmailTemplates()" class="btn-primary" style="flex:1;">Generate to Notepad</button>
-            <button onclick="openEditTemplatesModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border-color);background:none;font-weight:600;cursor:pointer;">✏️ Edit Templates</button>
-        </div>
-        <div id="emailOutputs" style="margin-bottom:24px;"></div>
-
-        <label>Full Notes / History</label>
-        <textarea id="profileNotes" style="height:120px;"></textarea>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <button onclick="saveProfile()" class="btn-primary">Save Profile</button>
-            <button onclick="closeModal('profileModal')" style="border:1px solid var(--border-color);border-radius:8px;background:none;font-weight:bold;cursor:pointer;">Close</button>
-        </div>
+      </form>
+      <div class="booking-success" id="booking-success">
+        <h2 data-lang-en="We Got It!" data-lang-es="¡Lo Recibimos!">We Got It!</h2>
+        <p data-lang-en="Thanks for reaching out. Soul Faith's team will be in touch soon."
+           data-lang-es="Gracias por contactarnos. El equipo de Soul Faith se pondrá en contacto pronto.">
+          Thanks for reaching out. Soul Faith's team will be in touch soon.
+        </p>
+      </div>
     </div>
-</div>
+  </div>
 
-<!-- ─── EXCEL MAP MODAL ───────────────────────────────────────────────────── -->
-<div id="excelMapModal" class="modal-overlay">
-    <div class="modal-content">
-        <h2>Map Your Columns</h2>
-        <div style="font-size:0.85em;color:#666;margin-bottom:20px;">Select which columns in your file match our system.</div>
-        <label>Full Name</label><select id="mapNameSelect"></select>
-        <label>Phone Number</label><select id="mapPhoneSelect"></select>
-        <label>Email (Optional)</label><select id="mapEmailSelect"></select>
-        <label>Resort (Optional)</label><select id="mapResortSelect"></select>
-        <label>City (Optional)</label><select id="mapCitySelect"></select>
-        <label>Prev Calls (Optional)</label><select id="mapCallsSelect"></select>
-        <label>Appointment (Optional)</label><select id="mapApptSelect"></select>
-        <label>Notes (Optional)</label><select id="mapNotesSelect"></select>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px;">
-            <button onclick="finalizeImport()" class="btn-primary">Start Importing</button>
-            <button onclick="closeModal('excelMapModal')" style="background:none;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;">Cancel</button>
-        </div>
-    </div>
-</div>
 
-<!-- ─── ADD LEAD MODAL ───────────────────────────────────────────────────── -->
-<div id="addLeadModal" class="modal-overlay">
-    <div class="modal-content" style="max-width:440px;">
-        <h2>➕ Add Single Lead</h2>
-        <label>Full Name *</label><input type="text" id="addLeadName" placeholder="John Smith">
-        <label>Phone Number *</label><input type="text" id="addLeadPhone" placeholder="(555) 123-4567">
-        <label>Email</label><input type="email" id="addLeadEmail" placeholder="john@email.com">
-        <label>Resort</label><input type="text" id="addLeadResort" placeholder="e.g. Marriott Vacation Club">
-        <label>City</label><input type="text" id="addLeadCity" placeholder="Leave blank to auto-detect from area code">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
-            <button onclick="saveAddLead()" class="btn-primary">Add Lead</button>
-            <button onclick="closeModal('addLeadModal')" style="background:none;border:1px solid var(--border-color);border-radius:8px;font-weight:bold;cursor:pointer;">Cancel</button>
-        </div>
-    </div>
-</div>
+  <!-- COOKIE BANNER -->
+  <div id="cookie-banner">
+    <p data-lang-en="We use cookies to improve your experience. By using this site you agree to our <a href='#'>Privacy Policy</a>."
+       data-lang-es="Usamos cookies para mejorar tu experiencia. Al usar este sitio aceptas nuestra <a href='#'>Política de Privacidad</a>.">
+      We use cookies to improve your experience. By using this site you agree to our <a href="#">Privacy Policy</a>.
+    </p>
+    <button class="cookie-accept" onclick="acceptCookies()" data-lang-en="Got it" data-lang-es="Entendido">Got it</button>
+  </div>
 
-<!-- ─── MANUAL DIAL MODAL ────────────────────────────────────────────────── -->
-<div id="manualDialModal" class="modal-overlay">
-    <div class="modal-content" style="max-width:400px;">
-        <h2>📞 Manual Dial</h2>
-        <p style="font-size:0.85em;color:#718096;margin-bottom:16px;">Type any phone number and choose which of your 5 numbers to call from. This call is one-off and won't be added to the queue.</p>
-        <label>Phone Number to Call</label>
-        <input type="text" id="manualDialNumber" placeholder="(555) 123-4567">
-        <label>Call From (Your Caller ID)</label>
-        <select id="manualCallerIdSelect" style="margin-bottom:16px;"></select>
-        <button id="manualDialBtn" onclick="placeManualCall()" style="width:100%;padding:12px;background:linear-gradient(135deg,#10b981,#34d399);color:white;border:none;border-radius:8px;font-weight:700;font-size:1.05em;cursor:pointer;">📲 DIAL NOW</button>
-        <div id="manualCallStatus" style="display:none;margin-top:12px;padding:10px;background:rgba(16,185,129,0.08);border-radius:8px;text-align:center;">
-            <div id="manualCallTimer" class="call-timer">00:00</div>
-            <span style="font-weight:600;color:#10b981;">Call Connected</span>
-            <button onclick="hangUpManual()" style="margin-left:12px;padding:5px 12px;background:var(--danger);color:white;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">🛑 Hang Up</button>
-        </div>
-        <button onclick="closeManualDial()" style="width:100%;margin-top:12px;padding:10px;border-radius:8px;font-weight:bold;border:1px solid var(--border-color);background:none;cursor:pointer;">Close</button>
-    </div>
-</div>
 
-<!-- ─── AUDIO TEST MODAL ──────────────────────────────────────────────────── -->
-<div id="audioTestModal" class="modal-overlay">
-    <div class="modal-content" style="max-width:480px;">
-        <h2>🎙️ Audio Quality Test</h2>
-        <p style="font-size:0.85em;color:#718096;margin-bottom:16px;">Run this before you start calling. It tests your microphone and gives you easy steps to fix any issues — no tech knowledge needed.</p>
-        <div id="audioTestStatus" style="text-align:center;padding:20px;border:2px dashed var(--border-color);border-radius:12px;margin-bottom:16px;">
-            <div style="font-size:2em;margin-bottom:8px;">🎙️</div>
-            <div id="audioTestMsg" style="font-size:0.9em;font-weight:600;">Click "Start Test" to check your audio</div>
-            <div id="audioTestBar" style="margin-top:12px;display:none;">
-                <div style="font-size:0.75em;color:#718096;margin-bottom:4px;">Mic Level</div>
-                <div style="height:12px;background:rgba(226,232,240,0.5);border-radius:999px;overflow:hidden;">
-                    <div id="audioLevelFill" style="height:100%;width:0%;background:linear-gradient(135deg,#10b981,#34d399);transition:width 0.1s;"></div>
-                </div>
-            </div>
-        </div>
-        <div id="audioTestResults" style="display:none;">
-            <div id="audioResultCards"></div>
-            <div style="margin-top:12px;">
-                <label style="text-transform:none;font-size:0.85em;font-weight:600;color:var(--primary);">🔧 Codec Setting (Internet Quality Adjustment)</label>
-                <p style="font-size:0.8em;color:#718096;margin-bottom:8px;">If your call sounds choppy or delayed, switching to Standard Mode uses less internet and often sounds better on slower connections.</p>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                    <button onclick="setCodec('opus')" id="codecOpusBtn" style="padding:10px;border-radius:8px;border:2px solid var(--primary);font-weight:600;cursor:pointer;background:rgba(0,123,255,0.1);color:var(--primary);">HD Mode (Opus)<br><small style="font-weight:400;">Best quality — fast internet</small></button>
-                    <button onclick="setCodec('pcmu')" id="codecPcmuBtn" style="padding:10px;border-radius:8px;border:2px solid var(--border-color);font-weight:600;cursor:pointer;background:none;color:var(--text-main);">Standard Mode (PCMU)<br><small style="font-weight:400;">Lower bandwidth — slower internet</small></button>
-                </div>
-            </div>
-        </div>
-        <div style="display:flex;gap:10px;margin-top:16px;">
-            <button id="audioTestStartBtn" onclick="startAudioTest()" style="flex:1;padding:12px;background:linear-gradient(135deg,#007bff,#63b3ed);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;">▶ Start Test (5 sec)</button>
-            <button onclick="closeModal('audioTestModal')" style="flex:1;padding:10px;border-radius:8px;font-weight:bold;border:1px solid var(--border-color);background:none;cursor:pointer;">Done</button>
-        </div>
-    </div>
-</div>
+  <script>
+    /* ============ BAND DATA ============ */
 
-<!-- ─── EDIT TEMPLATES MODAL ─────────────────────────────────────────────── -->
-<div id="editTemplatesModal" class="modal-overlay">
-    <div class="modal-content" style="max-width:560px;">
-        <h2>✏️ Edit Email Templates</h2>
-        <p style="font-size:0.85em;color:#718096;margin-bottom:16px;">Customize your email templates once and they'll be saved forever. When you generate an email, it automatically fills in the client's last name and resort. Available placeholders: <code>{firstName}</code>, <code>{lastName}</code>, <code>{resort}</code></p>
-
-        <div style="background:rgba(0,123,255,0.06);border-radius:12px;padding:14px;margin-bottom:20px;">
-            <div style="font-size:0.8em;font-weight:700;color:var(--primary);margin-bottom:10px;text-transform:uppercase;">Your Signature Info (saved once)</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <div><label style="font-size:0.7em;">Your Name</label><input type="text" id="sigName" placeholder="e.g. Carlos Rodriguez" style="margin-bottom:0;"></div>
-                <div><label style="font-size:0.7em;">Your Title</label><input type="text" id="sigTitle" placeholder="e.g. Vacation Consultant" style="margin-bottom:0;"></div>
-                <div><label style="font-size:0.7em;">Your Phone</label><input type="text" id="sigPhone" placeholder="e.g. (812) 901-0600" style="margin-bottom:0;"></div>
-                <div><label style="font-size:0.7em;">Your Extension</label><input type="text" id="sigExt" placeholder="e.g. 205" style="margin-bottom:0;"></div>
-            </div>
-        </div>
-
-        <label>Initial Inquiry Template</label>
-        <textarea id="tplInquiry" style="height:120px;font-size:0.82em;"></textarea>
-
-        <label>Thank You - Quick Response Template</label>
-        <textarea id="tplThankyou" style="height:120px;font-size:0.82em;"></textarea>
-
-        <label>Follow-Up - Long Delay Template</label>
-        <textarea id="tplFollowup" style="height:120px;font-size:0.82em;"></textarea>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
-            <button onclick="saveEmailTemplates()" class="btn-primary">💾 Save Templates</button>
-            <button onclick="closeModal('editTemplatesModal')" style="background:none;border:1px solid var(--border-color);border-radius:8px;font-weight:bold;cursor:pointer;">Cancel</button>
-        </div>
-    </div>
-</div>
-
-<!-- ─── CUSTOM QUEUE MODAL (kept for internal use) ───────────────────────── -->
-<div id="customQueueModal" class="modal-overlay" style="display:none;">
-    <div class="modal-content" style="max-width:400px;">
-        <h2>🛠️ Custom Queue Builder</h2>
-        <label>Select Resort</label>
-        <select id="customResortSelect"></select>
-        <label>Max Leads to Queue</label>
-        <input type="number" id="customQueueMax" value="50">
-        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.9em;">
-            <input type="checkbox" id="customOnlyFresh" checked style="width:auto;padding:0;margin:0;"> Only uncalled today
-        </label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;">
-            <button onclick="buildCustomQueue()" class="btn-primary">Generate Queue</button>
-            <button onclick="closeModal('customQueueModal')" style="background:none;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;">Cancel</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    // ── CONSTANTS ─────────────────────────────────────────────────────────
-    const TOKEN_URL = 'https://dialer-1641.twil.io/token';
-    const TWILIO_NUMBERS = [
-        '+18129010600',
-        '+13252080883',
-        '+13252080358',
-        '+13256665731',
-        '+13256665490'
+    const MEMBERS = [
+      { name:"JOEL HDEZ OCHOA",   role:"Lead Vocals",    roleEs:"Voz Principal",
+        bioEn:"Joel is the voice and soul of Soul Faith. [Add his personal bio — background, influences, how long with the band, etc.]",
+        bioEs:"Joel es la voz y el alma de Soul Faith. [Agrega su bio personal — historia, influencias, años en la banda, etc.]" },
+      { name:"OMAR HDZ OCHOA",    role:"Lead Guitar",    roleEs:"Guitarra Requinto",
+        bioEn:"Omar brings precision and fire to Soul Faith's lead guitar work. [Add his bio here.]",
+        bioEs:"Omar aporta precisión y fuego a la guitarra de Soul Faith. [Agrega su bio aquí.]" },
+      { name:"ALEJANDRO MOKAY",   role:"Rhythm Guitar",  roleEs:"Guitarra Rítmica",
+        bioEn:"Alejandro is the rhythmic backbone of Soul Faith. [Add his bio here.]",
+        bioEs:"Alejandro es la columna rítmica de Soul Faith. [Agrega su bio aquí.]" },
+      { name:"ENRIQUE HDZ OCHOA", role:"Drums",          roleEs:"Batería",
+        bioEn:"Enrique is the engine of the band — powerful, precise, and relentless behind the kit. [Add his bio here.]",
+        bioEs:"Enrique es el motor de la banda — poderoso, preciso e incansable tras la batería. [Agrega su bio aquí.]" }
     ];
-    const ACTIVE_NUMBER_COUNT = TWILIO_NUMBERS.length;
-    const KEY_LEADS       = 'leads_v4_system';
-    const KEY_QUEUE       = 'active_call_queue';
-    const KEY_INDEX       = 'active_queue_index';
-    const KEY_ROUND_ROBIN = 'round_robin_index';
-    const KEY_CALLBACKS   = 'scheduled_callbacks';
-    const KEY_TEMPLATES   = 'email_templates_v1';
-    const KEY_SIG         = 'email_signature_v1';
-    const KEY_CODEC       = 'preferred_codec';
 
-    // ── STATE ─────────────────────────────────────────────────────────────
-    let leads          = JSON.parse(localStorage.getItem(KEY_LEADS))    || [];
-    let callQueue      = JSON.parse(localStorage.getItem(KEY_QUEUE))    || [];
-    let queueIndex     = parseInt(localStorage.getItem(KEY_INDEX))      || 0;
-    let roundRobinIndex= parseInt(localStorage.getItem(KEY_ROUND_ROBIN))|| 0;
-    let callbacks      = JSON.parse(localStorage.getItem(KEY_CALLBACKS))|| [];
-    let currentPage    = 1;
-    const leadsPerPage = 20;
-    let currentProfileId = null;
-    let showHidden     = false;
-    let sortKey        = 'name';
-    let sortDir        = 1;
-    let device         = null;
-    let activeCall     = null;
-    let manualCall     = null;
-    let callTimerInterval   = null;
-    let callStartTime       = null;
-    let preferredCodec      = localStorage.getItem(KEY_CODEC) || 'opus';
-
-    // ── RECORDING STATE ───────────────────────────────────────────────────
-    let mediaRecorder    = null;
-    let recordingChunks  = [];
-    let isRecording      = false;
-    let currentRecordingLeadId = null;
-
-    // ── INDEXEDDB FOR RECORDINGS ──────────────────────────────────────────
-    let recDB = null;
-    function initRecDB() {
-        const req = indexedDB.open('dialerRecordings', 1);
-        req.onupgradeneeded = e => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains('recordings')) {
-                db.createObjectStore('recordings', { keyPath: 'id', autoIncrement: true });
-            }
-        };
-        req.onsuccess = e => { recDB = e.target.result; };
-        req.onerror   = () => { console.warn('IndexedDB unavailable — recordings will be session-only'); };
-    }
-
-    function saveRecording(leadId, blob) {
-        return new Promise((resolve, reject) => {
-            if (!recDB) return resolve(null);
-            const tx = recDB.transaction('recordings', 'readwrite');
-            const store = tx.objectStore('recordings');
-            const rec = { leadId, timestamp: new Date().toISOString(), blob };
-            const req = store.add(rec);
-            req.onsuccess = e => resolve(e.target.result);
-            req.onerror   = reject;
-        });
-    }
-
-    function getRecordingsForLead(leadId) {
-        return new Promise((resolve) => {
-            if (!recDB) return resolve([]);
-            const tx = recDB.transaction('recordings', 'readonly');
-            const store = tx.objectStore('recordings');
-            const all = store.getAll();
-            all.onsuccess = e => resolve(e.target.result.filter(r => r.leadId === leadId));
-            all.onerror   = () => resolve([]);
-        });
-    }
-
-    function deleteRecording(id) {
-        if (!recDB) return;
-        const tx = recDB.transaction('recordings', 'readwrite');
-        tx.objectStore('recordings').delete(id);
-    }
-
-    // ── INIT ──────────────────────────────────────────────────────────────
-    window.onload = () => {
-        document.getElementById('dateLabel').innerText = luxon.DateTime.now().toLocaleString(luxon.DateTime.DATE_HUGE);
-        updateClock();
-        setInterval(updateClock, 1000);
-        setInterval(checkCallbacks, 30000);
-        setInterval(updateSmartQueueCount, 60000);
-        initTwilioDevice();
-        initRecDB();
-        renderLeads();
-        updateQueueUI();
-        updateFilterResorts();
-        renderCallbackList();
-        checkCallbacks();
-        updateSmartQueueCount();
-        makeDraggable();
-        populateManualCallerIds();
-    };
-
-    function updateClock() {
-        document.getElementById('clock').innerText = luxon.DateTime.now().toFormat('hh:mm:ss a');
-    }
-
-    // ── TWILIO DEVICE ─────────────────────────────────────────────────────
-    async function initTwilioDevice() {
-        const statusEl = document.getElementById('twilioStatusDisplay');
-        try {
-            const res = await fetch(TOKEN_URL);
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const data = await res.json();
-            const codecPref = preferredCodec === 'pcmu' ? ['pcmu', 'opus'] : ['opus', 'pcmu'];
-            device = new Twilio.Device(data.token, { codecPreferences: codecPref, logLevel: 1 });
-            device.on('registered', () => {
-                statusEl.innerHTML = `<span class="status-dot online"></span><span style="color:#10b981;font-weight:bold;">Device Online & Ready</span>`;
-            });
-            device.on('error', (err) => {
-                statusEl.innerHTML = `<span class="status-dot"></span><span style="color:#dc3545;font-weight:bold;">Error: ${err.message}</span>`;
-            });
-            device.on('tokenWillExpire', async () => {
-                const r = await fetch(TOKEN_URL);
-                const d = await r.json();
-                device.updateToken(d.token);
-            });
-            await device.register();
-        } catch (err) {
-            statusEl.innerHTML = `<span class="status-dot"></span><span style="color:#dc3545;">Offline: ${err.message}</span>`;
-        }
-    }
-
-    function setCodec(codec) {
-        preferredCodec = codec;
-        localStorage.setItem(KEY_CODEC, codec);
-        document.getElementById('codecOpusBtn').style.border = codec === 'opus' ? '2px solid var(--primary)' : '2px solid var(--border-color)';
-        document.getElementById('codecOpusBtn').style.background = codec === 'opus' ? 'rgba(0,123,255,0.1)' : 'none';
-        document.getElementById('codecPcmuBtn').style.border = codec === 'pcmu' ? '2px solid var(--primary)' : '2px solid var(--border-color)';
-        document.getElementById('codecPcmuBtn').style.background = codec === 'pcmu' ? 'rgba(0,123,255,0.1)' : 'none';
-        // Re-init device with new codec
-        if (device) {
-            device.destroy();
-            device = null;
-            initTwilioDevice();
-            alert(`Codec switched to ${codec === 'opus' ? 'HD Mode (Opus)' : 'Standard Mode (PCMU)'}. Twilio device is reconnecting...`);
-        }
-    }
-
-    // ── DRAGGABLE DIALER ──────────────────────────────────────────────────
-    function makeDraggable() {
-        const content = document.getElementById('dialerModalContent');
-        const handle  = document.getElementById('dialerDragHandle');
-        let isDragging = false, startX, startY, startLeft, startTop;
-
-        handle.addEventListener('mousedown', e => {
-            isDragging = true;
-            const rect = content.getBoundingClientRect();
-            startX = e.clientX; startY = e.clientY;
-            startLeft = rect.left; startTop = rect.top;
-            content.style.transform = 'none';
-            content.style.left = startLeft + 'px';
-            content.style.top  = startTop  + 'px';
-            e.preventDefault();
-        });
-        document.addEventListener('mousemove', e => {
-            if (!isDragging) return;
-            content.style.left = (startLeft + e.clientX - startX) + 'px';
-            content.style.top  = (startTop  + e.clientY - startY) + 'px';
-        });
-        document.addEventListener('mouseup', () => { isDragging = false; });
-    }
-
-    // ── DTMF ──────────────────────────────────────────────────────────────
-    function sendDTMF(digit) {
-        if (activeCall) activeCall.sendDigits(digit);
-        if (manualCall) manualCall.sendDigits(digit);
-    }
-    function showDTMF() {
-        document.getElementById('dtmfSection').style.display = 'block';
-        const pd = document.getElementById('profileDtmfSection');
-        if (pd) pd.style.display = 'block';
-    }
-    function hideDTMF() {
-        document.getElementById('dtmfSection').style.display = 'none';
-        const pd = document.getElementById('profileDtmfSection');
-        if (pd) pd.style.display = 'none';
-    }
-
-    // ── CALL TIMER ────────────────────────────────────────────────────────
-    function startCallTimer(displayId) {
-        callStartTime = Date.now();
-        callTimerInterval = setInterval(() => {
-            const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
-            const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
-            const s = String(elapsed % 60).padStart(2, '0');
-            const el = document.getElementById(displayId);
-            if (el) el.textContent = `${m}:${s}`;
-        }, 1000);
-        const timerEl = document.getElementById(displayId);
-        if (timerEl) { timerEl.style.display = 'block'; timerEl.textContent = '00:00'; }
-    }
-    function stopCallTimer(displayId) {
-        clearInterval(callTimerInterval);
-        callTimerInterval = null;
-        callStartTime = null;
-        const el = document.getElementById(displayId);
-        if (el) el.style.display = 'none';
-    }
-
-    // ── RECORDING ─────────────────────────────────────────────────────────
-    async function toggleRecording() {
-        if (isRecording) {
-            stopRecording();
-        } else {
-            await startRecording();
-        }
-    }
-
-    async function startRecording() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            recordingChunks = [];
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordingChunks.push(e.data); };
-            mediaRecorder.onstop = async () => {
-                const blob = new Blob(recordingChunks, { type: 'audio/webm' });
-                stream.getTracks().forEach(t => t.stop());
-                const leadId = callQueue[queueIndex]?.id;
-                if (leadId) {
-                    await saveRecording(leadId, blob);
-                }
-                recordingChunks = [];
-                mediaRecorder = null;
-            };
-            mediaRecorder.start();
-            isRecording = true;
-            currentRecordingLeadId = callQueue[queueIndex]?.id;
-            const btn = document.getElementById('recordBtn');
-            btn.classList.add('recording');
-            btn.textContent = '⏹ Stop';
-            document.getElementById('recordingStatus').style.display = 'block';
-        } catch (err) {
-            alert('Microphone access denied. Please allow mic access in your browser settings and try again.');
-        }
-    }
-
-    function stopRecording() {
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            mediaRecorder.stop();
-        }
-        isRecording = false;
-        const btn = document.getElementById('recordBtn');
-        btn.classList.remove('recording');
-        btn.textContent = '🔴 Record';
-        document.getElementById('recordingStatus').style.display = 'none';
-    }
-
-    async function renderProfileRecordings(leadId) {
-        const container = document.getElementById('profileRecordings');
-        const recs = await getRecordingsForLead(leadId);
-        if (!recs.length) {
-            container.innerHTML = '<div style="font-size:0.8em;color:#718096;">No recordings for this lead yet.<br><small>Hit the 🔴 Record button in the dialer to capture a call.</small></div>';
-            return;
-        }
-        container.innerHTML = recs.reverse().map(r => {
-            const url = URL.createObjectURL(r.blob);
-            const dt  = new Date(r.timestamp).toLocaleString();
-            return `
-            <div class="recording-entry">
-                <span style="font-size:0.75em;color:#718096;white-space:nowrap;">${dt}</span>
-                <audio controls src="${url}" style="flex:1;height:32px;"></audio>
-                <button onclick="deleteRecording(${r.id});renderProfileRecordings('${leadId}')" style="padding:3px 8px;background:var(--danger);color:white;border:none;border-radius:5px;cursor:pointer;font-size:0.75em;">✕</button>
-            </div>`;
-        }).join('');
-    }
-
-    // ── QUICK NOTES ───────────────────────────────────────────────────────
-    function addQuickNote(text) {
-        const notes = document.getElementById('dialerNotes');
-        notes.value = notes.value ? notes.value + '\n' + text : text;
-    }
-
-    // ── CALLBACKS ─────────────────────────────────────────────────────────
-    function scheduleCallback() {
-        const dt = document.getElementById('callbackDateTime').value;
-        if (!dt) return alert('Please select a date and time for the callback.');
-        const current = callQueue[queueIndex];
-        if (!current) return;
-        callbacks.push({ leadId: current.id, name: current.name, phone: current.phone, datetime: dt, notified: false });
-        localStorage.setItem(KEY_CALLBACKS, JSON.stringify(callbacks));
-        document.getElementById('callbackDateTime').value = '';
-        renderCallbackList();
-        alert(`Callback scheduled for ${dt.replace('T', ' ')} — ${current.name}`);
-    }
-
-    function scheduleCallbackFromProfile() {
-        const dt = document.getElementById('profileCallbackDateTime').value;
-        if (!dt) return alert('Please select a date and time for the callback.');
-        const lead = leads.find(l => l.id === currentProfileId);
-        if (!lead) return;
-        callbacks.push({ leadId: lead.id, name: lead.name, phone: lead.phone, datetime: dt, notified: false });
-        localStorage.setItem(KEY_CALLBACKS, JSON.stringify(callbacks));
-        document.getElementById('profileCallbackDateTime').value = '';
-        renderCallbackList();
-        alert(`Callback scheduled for ${dt.replace('T', ' ')} — ${lead.name}`);
-    }
-
-    function checkCallbacks() {
-        const now = luxon.DateTime.now();
-        let alerted = false;
-        callbacks.forEach(cb => {
-            if (cb.notified) return;
-            const cbTime = luxon.DateTime.fromISO(cb.datetime);
-            if (now >= cbTime) {
-                cb.notified = true;
-                alerted = true;
-                if (Notification.permission === 'granted') {
-                    new Notification(`📞 Callback Due: ${cb.name}`, { body: `Time to call ${cb.name} — ${formatPhone(cb.phone)}` });
-                } else {
-                    alert(`📞 CALLBACK DUE!\n\n${cb.name}\n${formatPhone(cb.phone)}\n\nScheduled: ${cb.datetime.replace('T', ' ')}`);
-                }
-            }
-        });
-        if (alerted) localStorage.setItem(KEY_CALLBACKS, JSON.stringify(callbacks));
-        renderCallbackList();
-    }
-
-    function renderCallbackList() {
-        const list = document.getElementById('callbackList');
-        const pending = callbacks.filter(cb => !cb.notified).sort((a,b) => a.datetime.localeCompare(b.datetime));
-        if (!pending.length) {
-            list.innerHTML = '<div style="font-size:0.8em;color:#718096;">No callbacks scheduled.</div>';
-            return;
-        }
-        list.innerHTML = pending.map((cb) => `
-            <div class="callback-alert" onclick="openProfile('${cb.leadId}')">
-                <strong>${cb.name}</strong> — ${formatPhone(cb.phone)}<br>
-                <small>📅 ${cb.datetime.replace('T', ' ')}</small>
-                <button onclick="event.stopPropagation();dismissCallback(${callbacks.indexOf(cb)})" style="float:right;padding:2px 8px;font-size:0.75em;background:var(--danger);color:white;border:none;border-radius:4px;cursor:pointer;">✕</button>
-            </div>
-        `).join('');
-    }
-
-    function dismissCallback(index) {
-        callbacks.splice(index, 1);
-        localStorage.setItem(KEY_CALLBACKS, JSON.stringify(callbacks));
-        renderCallbackList();
-    }
-
-    // ── SMART TIMEZONE QUEUE ──────────────────────────────────────────────
-    function getLeadLocalHour(ph) {
-        const c  = String(ph).replace(/\D/g,'');
-        const ac = c.length>=10 ? c.substring(c.length-10, c.length-7) : '';
-        const zones = {
-            'America/Chicago':['205','210','225','228','312','314','318','337','402','405','414','501','504','512','515','601','612','615','630','636','651','682','713','715','731','769','816','817','832','870','901','903','913','918','931','936','940','956','972','979','985'],
-            'America/Denver':['303','307','385','406','435','505','719','720','801','928','970'],
-            'America/Los_Angeles':['206','213','253','310','323','360','408','415','424','442','503','509','510','530','541','559','562','619','626','650','657','661','669','702','707','714','747','760','775','805','818','831','858','916','925','949','951','971']
-        };
-        let zone = 'America/New_York';
-        for (const [z, codes] of Object.entries(zones)) {
-            if (codes.includes(ac)) { zone=z; break; }
-        }
-        return { hour: luxon.DateTime.now().setZone(zone).hour, zone };
-    }
-
-    function updateSmartQueueCount() {
-        const available = leads.filter(l => !l.hidden);
-        const prime = available.filter(l => {
-            const { hour } = getLeadLocalHour(l.phone);
-            return hour >= 9 && hour < 20; // 9am-8pm their time
-        });
-        document.getElementById('smartQueueCount').textContent = prime.length;
-    }
-
-    function startSmartQueue() {
-        const available = leads.filter(l => !l.hidden);
-        // Filter leads where it's currently between 9AM and 8PM their local time
-        let prime = available.filter(l => {
-            const { hour } = getLeadLocalHour(l.phone);
-            return hour >= 9 && hour < 20;
-        });
-        if (!prime.length) {
-            // Fall back to anyone in a reasonable window
-            prime = available;
-            alert('No leads in prime calling hours right now. Queuing all available leads instead.');
-        }
-        // Sort: closest to noon = most prime time
-        prime.sort((a, b) => {
-            const hourA = getLeadLocalHour(a.phone).hour;
-            const hourB = getLeadLocalHour(b.phone).hour;
-            const distA = Math.abs(hourA - 13); // distance from 1PM
-            const distB = Math.abs(hourB - 13);
-            return distA - distB;
-        });
-        callQueue = prime.slice(0, 100);
-        queueIndex = 0;
-        saveQueue(); updateQueueUI(); openDialerModal();
-    }
-
-    // ── QUEUE ─────────────────────────────────────────────────────────────
-    function startQueue() {
-        let available = leads.filter(l => !l.hidden);
-        if (!available.length) return alert('No available leads matching criteria.');
-        callQueue = shuffle(available).slice(0, 100);
-        queueIndex = 0;
-        saveQueue(); updateQueueUI(); openDialerModal();
-    }
-
-    function startFullQueue() {
-        let available = leads.filter(l => !l.hidden);
-        if (!available.length) return alert('No leads in database.');
-        callQueue = shuffle(available).slice(0, 100);
-        queueIndex = 0;
-        saveQueue(); updateQueueUI(); openDialerModal();
-    }
-
-    function stopQueue() {
-        if (isRecording) stopRecording();
-        callQueue = []; queueIndex = 0;
-        saveQueue(); updateQueueUI();
-        closeModal('dialerModal');
-    }
-
-    function openDialerModal() {
-        const current = callQueue[queueIndex];
-        if (!current) return stopQueue();
-        document.getElementById('dialerProgress').textContent = `LEAD ${queueIndex + 1} OF ${callQueue.length}`;
-        document.getElementById('dialerName').textContent = current.name;
-        document.getElementById('dialerTime').textContent = getLocalTimeForLead(current.phone);
-        document.getElementById('dialerCity').textContent = current.city || getCityFromPhone(current.phone);
-        document.getElementById('dialerResort').textContent = current.resort || 'Batch';
-        document.getElementById('dialerCalls').textContent = (current.calls || 0) + ' Calls';
-        document.getElementById('dialerPhone').textContent = formatPhone(current.phone);
-        document.getElementById('dialerNotes').value = '';
-        document.getElementById('callbackDateTime').value = '';
-        hideDTMF();
-        stopCallTimer('callTimerDisplay');
-        // Reset recording button
-        if (isRecording) stopRecording();
-        const recBtn = document.getElementById('recordBtn');
-        recBtn.classList.remove('recording');
-        recBtn.textContent = '🔴 Record';
-        document.getElementById('recordingStatus').style.display = 'none';
-
-        const sel = document.getElementById('callerIdSelect');
-        const previewAutoNum = TWILIO_NUMBERS[roundRobinIndex % ACTIVE_NUMBER_COUNT];
-        sel.innerHTML = `<option value="auto">Auto Round-Robin — next: ${formatPhone(previewAutoNum)}</option>`
-            + TWILIO_NUMBERS.map(n => `<option value="${n}">${formatPhone(n)}</option>`).join('');
-        sel.value = 'auto';
-        document.getElementById('twilioCallerId').textContent = formatPhone(previewAutoNum);
-
-        if (Notification.permission === 'default') Notification.requestPermission();
-        resetDialButton();
-        document.getElementById('dialerModal').style.display = 'block';
-    }
-
-    function onCallerIdSelectChange() {
-        const sel = document.getElementById('callerIdSelect');
-        document.getElementById('twilioCallerId').textContent = sel.value === 'auto'
-            ? formatPhone(TWILIO_NUMBERS[roundRobinIndex % ACTIVE_NUMBER_COUNT])
-            : formatPhone(sel.value);
-    }
-
-    function getActiveCallerNumber() {
-        const sel = document.getElementById('callerIdSelect');
-        if (!sel || sel.value === 'auto') {
-            const num = TWILIO_NUMBERS[roundRobinIndex % ACTIVE_NUMBER_COUNT];
-            roundRobinIndex++;
-            localStorage.setItem(KEY_ROUND_ROBIN, String(roundRobinIndex));
-            return num;
-        }
-        return sel.value;
-    }
-
-    async function placeTwilioCallNow() {
-        if (!device) return alert('Twilio device not connected. Check the token URL.');
-        const current = callQueue[queueIndex];
-        const callerNum = getActiveCallerNumber();
-        window._lastUsedCallerNum = callerNum;
-        document.getElementById('twilioCallerId').textContent = formatPhone(callerNum);
-        const btn = document.getElementById('mainDialButton');
-        btn.disabled = true;
-        btn.innerText = '⏳ CONNECTING...';
-        try {
-            activeCall = await device.connect({ params: { To: current.phone, From: callerNum } });
-            activeCall.on('disconnect', () => {
-                resetDialButton(); hideDTMF();
-                stopCallTimer('callTimerDisplay');
-                activeCall = null;
-            });
-            activeCall.on('cancel', () => {
-                resetDialButton(); hideDTMF();
-                stopCallTimer('callTimerDisplay');
-                activeCall = null;
-            });
-            btn.innerText = '🛑 HANG UP';
-            btn.style.background = 'linear-gradient(135deg,#dc3545,#c53030)';
-            btn.disabled = false;
-            btn.onclick = hangUp;
-            showDTMF();
-            startCallTimer('callTimerDisplay');
-        } catch (err) {
-            alert('Call failed: ' + err.message);
-            resetDialButton();
-        }
-    }
-
-    function hangUp() {
-        if (activeCall) { activeCall.disconnect(); activeCall = null; }
-        resetDialButton(); hideDTMF();
-        stopCallTimer('callTimerDisplay');
-    }
-
-    function resetDialButton() {
-        const btn = document.getElementById('mainDialButton');
-        if (!btn) return;
-        btn.innerText = '📲 DIAL WITH ASSIGNED TWILIO NUMBER';
-        btn.style.background = 'linear-gradient(135deg,#10b981,#34d399)';
-        btn.disabled = false;
-        btn.onclick = placeTwilioCallNow;
-    }
-
-    function queueAction(type) {
-        if (isRecording) stopRecording();
-        hangUp();
-        const lead = leads.find(l => l.id === callQueue[queueIndex]?.id);
-        if (lead) {
-            lead.calls = (lead.calls || 0) + 1;
-            lead.lastCalledDate = luxon.DateTime.now().toISODate();
-            const usedNum = window._lastUsedCallerNum || TWILIO_NUMBERS[0];
-            const defaultNoteMap = { call:'Call logged', vm:'Left voicemail', no_connect:"Didn't go through", delete:'Disconnected/deleted' };
-            const noteText = document.getElementById('dialerNotes').value.trim() || defaultNoteMap[type] || 'Call logged';
-            const timestamp = luxon.DateTime.now().toFormat('M/d HH:mm');
-            lead.notes = `[${timestamp}] (${formatPhone(usedNum)}) ${noteText}\n` + (lead.notes || '');
-            if (type === 'delete') lead.hidden = true;
-            lead.disposition = type === 'no_connect' ? 'no_connect' : type === 'vm' ? 'vm' : 'called';
-        }
-        window._lastUsedCallerNum = null;
-        save();
-        queueIndex++;
-        if (queueIndex < callQueue.length) {
-            saveQueue(); updateQueueUI(); openDialerModal();
-        } else {
-            alert('Queue complete!');
-            stopQueue();
-        }
-        renderLeads();
-    }
-
-    function openProfileFromDialer() {
-        const current = callQueue[queueIndex];
-        if (current) openProfile(current.id);
-    }
-
-    function logCallAndHide(id) {
-        const lead = leads.find(l => l.id === id);
-        if (!lead) return;
-        callQueue = [lead];
-        queueIndex = 0;
-        saveQueue(); updateQueueUI(); openDialerModal();
-    }
-
-    // ── CALL FROM PROFILE ─────────────────────────────────────────────────
-    async function callFromProfile() {
-        if (!device) return alert('Twilio device not connected.');
-        const lead = leads.find(l => l.id === currentProfileId);
-        if (!lead) return;
-        if (activeCall || manualCall) return alert('Already on a call. Hang up first.');
-        const callerNum = lead.twilioNumber || TWILIO_NUMBERS[0];
-        const btn = document.getElementById('profileCallNowBtn');
-        const statusDiv = document.getElementById('profileCallStatus');
-        const statusText = document.getElementById('profileCallStatusText');
-        btn.disabled = true;
-        btn.innerText = '⏳ CONNECTING...';
-        statusDiv.style.display = 'block';
-        statusText.textContent = 'Connecting...';
-        try {
-            activeCall = await device.connect({ params: { To: lead.phone, From: callerNum } });
-            activeCall.on('disconnect', () => {
-                activeCall = null;
-                btn.disabled = false; btn.innerText = '📲 CALL NOW';
-                statusDiv.style.display = 'none';
-                hideDTMF(); stopCallTimer('profileCallTimer');
-                lead.calls = (lead.calls || 0) + 1;
-                lead.lastCalledDate = luxon.DateTime.now().toISODate();
-                lead.notes = `[${luxon.DateTime.now().toFormat('M/d HH:mm')}] (${formatPhone(callerNum)}) Called from profile\n` + (lead.notes || '');
-                lead.disposition = 'called';
-                save(); renderLeads();
-                document.getElementById('profileCalls').textContent = lead.calls;
-            });
-            activeCall.on('cancel', () => {
-                activeCall = null;
-                btn.disabled = false; btn.innerText = '📲 CALL NOW';
-                statusDiv.style.display = 'none';
-                hideDTMF(); stopCallTimer('profileCallTimer');
-            });
-            btn.innerText = '🟢 ON CALL...';
-            statusText.textContent = 'Call connected!';
-            showDTMF();
-            startCallTimer('profileCallTimer');
-        } catch (err) {
-            alert('Call failed: ' + err.message);
-            btn.disabled = false; btn.innerText = '📲 CALL NOW';
-            statusDiv.style.display = 'none';
-        }
-    }
-
-    function hangUpFromProfile() {
-        if (activeCall) { activeCall.disconnect(); activeCall = null; }
-        const btn = document.getElementById('profileCallNowBtn');
-        btn.disabled = false; btn.innerText = '📲 CALL NOW';
-        document.getElementById('profileCallStatus').style.display = 'none';
-        hideDTMF(); stopCallTimer('profileCallTimer');
-    }
-
-    // ── MANUAL DIAL ───────────────────────────────────────────────────────
-    function populateManualCallerIds() {
-        const sel = document.getElementById('manualCallerIdSelect');
-        sel.innerHTML = TWILIO_NUMBERS.map(n => `<option value="${n}">${formatPhone(n)}</option>`).join('');
-    }
-
-    function openManualDialModal() {
-        document.getElementById('manualDialNumber').value = '';
-        document.getElementById('manualCallStatus').style.display = 'none';
-        const btn = document.getElementById('manualDialBtn');
-        btn.disabled = false;
-        btn.textContent = '📲 DIAL NOW';
-        btn.style.background = 'linear-gradient(135deg,#10b981,#34d399)';
-        btn.onclick = placeManualCall;
-        document.getElementById('manualDialModal').style.display = 'block';
-    }
-
-    async function placeManualCall() {
-        if (!device) return alert('Twilio device not connected. Check the token URL.');
-        if (activeCall || manualCall) return alert('Already on a call. Hang up first.');
-        const rawNum = document.getElementById('manualDialNumber').value.replace(/\D/g,'');
-        if (rawNum.length < 10) return alert('Please enter a valid 10-digit phone number.');
-        const toNum     = rawNum.length === 10 ? '+1' + rawNum : '+' + rawNum;
-        const fromNum   = document.getElementById('manualCallerIdSelect').value;
-        const btn       = document.getElementById('manualDialBtn');
-        btn.disabled    = true;
-        btn.textContent = '⏳ CONNECTING...';
-        try {
-            manualCall = await device.connect({ params: { To: toNum, From: fromNum } });
-            manualCall.on('disconnect', () => {
-                manualCall = null;
-                btn.disabled = false; btn.textContent = '📲 DIAL NOW';
-                btn.style.background = 'linear-gradient(135deg,#10b981,#34d399)';
-                btn.onclick = placeManualCall;
-                document.getElementById('manualCallStatus').style.display = 'none';
-                stopCallTimer('manualCallTimer');
-            });
-            manualCall.on('cancel', () => {
-                manualCall = null;
-                btn.disabled = false; btn.textContent = '📲 DIAL NOW';
-                document.getElementById('manualCallStatus').style.display = 'none';
-                stopCallTimer('manualCallTimer');
-            });
-            btn.textContent = '🛑 HANG UP';
-            btn.style.background = 'linear-gradient(135deg,#dc3545,#c53030)';
-            btn.disabled = false;
-            btn.onclick = hangUpManual;
-            document.getElementById('manualCallStatus').style.display = 'block';
-            startCallTimer('manualCallTimer');
-        } catch (err) {
-            alert('Call failed: ' + err.message);
-            btn.disabled = false; btn.textContent = '📲 DIAL NOW';
-            btn.style.background = 'linear-gradient(135deg,#10b981,#34d399)';
-        }
-    }
-
-    function hangUpManual() {
-        if (manualCall) { manualCall.disconnect(); manualCall = null; }
-        const btn = document.getElementById('manualDialBtn');
-        btn.disabled = false; btn.textContent = '📲 DIAL NOW';
-        btn.style.background = 'linear-gradient(135deg,#10b981,#34d399)';
-        btn.onclick = placeManualCall;
-        document.getElementById('manualCallStatus').style.display = 'none';
-        stopCallTimer('manualCallTimer');
-    }
-
-    function closeManualDial() {
-        hangUpManual();
-        closeModal('manualDialModal');
-    }
-
-    // ── AUDIO QUALITY TEST ────────────────────────────────────────────────
-    let audioTestStream = null;
-    let audioAnalyser   = null;
-    let audioTestActive = false;
-
-    async function startAudioTest() {
-        const btn = document.getElementById('audioTestStartBtn');
-        const msg = document.getElementById('audioTestMsg');
-        const bar = document.getElementById('audioTestBar');
-        const results = document.getElementById('audioTestResults');
-
-        btn.disabled = true;
-        msg.textContent = 'Accessing your microphone...';
-
-        try {
-            audioTestStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        } catch (err) {
-            msg.textContent = '❌ Microphone access denied.';
-            btn.disabled = false;
-            document.getElementById('audioResultCards').innerHTML = `
-                <div class="audio-tip warn">
-                    <strong>🔒 Fix: Allow Microphone Access</strong><br>
-                    1. Click the 🔒 padlock icon in your browser's address bar<br>
-                    2. Find "Microphone" and set it to "Allow"<br>
-                    3. Refresh the page and try again
-                </div>`;
-            results.style.display = 'block';
-            return;
-        }
-
-        const audioCtx  = new AudioContext();
-        audioAnalyser   = audioCtx.createAnalyser();
-        const source    = audioCtx.createMediaStreamSource(audioTestStream);
-        source.connect(audioAnalyser);
-        audioAnalyser.fftSize = 256;
-        const dataArr   = new Uint8Array(audioAnalyser.frequencyBinCount);
-
-        bar.style.display = 'block';
-        msg.textContent = '🔴 Recording... Speak normally for 5 seconds';
-        audioTestActive = true;
-
-        let maxLevel = 0;
-        let samples  = [];
-        const levelFill = document.getElementById('audioLevelFill');
-
-        const sampleInterval = setInterval(() => {
-            audioAnalyser.getByteFrequencyData(dataArr);
-            const avg = dataArr.reduce((a,b) => a+b, 0) / dataArr.length;
-            const pct = Math.min(100, (avg / 128) * 100);
-            levelFill.style.width = pct + '%';
-            levelFill.style.background = pct < 10 ? '#dc3545' : pct < 40 ? '#f6ad55' : '#10b981';
-            samples.push(avg);
-            if (avg > maxLevel) maxLevel = avg;
-        }, 100);
-
-        setTimeout(() => {
-            clearInterval(sampleInterval);
-            audioTestStream.getTracks().forEach(t => t.stop());
-            audioTestActive = false;
-            bar.style.display = 'none';
-            btn.disabled = false;
-            btn.textContent = '🔄 Run Again';
-
-            const avgLevel  = samples.reduce((a,b) => a+b, 0) / samples.length;
-            const silentPct = samples.filter(s => s < 5).length / samples.length;
-
-            msg.textContent = '✅ Test complete — see results below';
-            results.style.display = 'block';
-
-            let cards = '';
-
-            // Mic volume check
-            if (avgLevel < 10) {
-                cards += `<div class="audio-tip warn">
-                    <strong>⚠️ Microphone Volume Too Low</strong><br>
-                    Your mic is barely picking up sound. Here's how to fix it:<br>
-                    1. Right-click the speaker icon in your Windows taskbar → Open Sound Settings<br>
-                    2. Click "Sound Control Panel" → Recording tab<br>
-                    3. Double-click your microphone → Properties → Levels tab<br>
-                    4. Drag the microphone slider up to 80–90%<br>
-                    5. Run the test again to confirm
-                </div>`;
-            } else if (avgLevel > 90) {
-                cards += `<div class="audio-tip warn">
-                    <strong>⚠️ Microphone Volume Too High (May Cause Distortion)</strong><br>
-                    1. Right-click speaker icon → Open Sound Settings → Sound Control Panel → Recording tab<br>
-                    2. Double-click your microphone → Properties → Levels tab<br>
-                    3. Lower the slider to around 70%<br>
-                    4. Also go to the Enhancements tab and check "Disable all enhancements"
-                </div>`;
-            } else {
-                cards += `<div class="audio-tip good">
-                    <strong>✅ Microphone Volume: Good</strong><br>
-                    Your mic level looks solid — no adjustments needed there.
-                </div>`;
-            }
-
-            // Silence check
-            if (silentPct > 0.5) {
-                cards += `<div class="audio-tip warn">
-                    <strong>⚠️ Too Much Silence Detected</strong><br>
-                    This usually means your mic has noise suppression cutting out your voice. Fix:<br>
-                    1. Right-click speaker icon → Sound Settings → Sound Control Panel → Recording tab<br>
-                    2. Double-click your microphone → Properties<br>
-                    3. Go to the <strong>Enhancements</strong> tab<br>
-                    4. Check the box "Disable all enhancements" and click OK
-                </div>`;
-            }
-
-            // Internet tip
-            cards += `<div class="audio-tip">
-                <strong>💡 Internet Speed Tip</strong><br>
-                For the best call quality:<br>
-                • Close YouTube, Netflix, or any streaming tabs while calling<br>
-                • Pause any downloads or Windows updates<br>
-                • If calls still sound choppy, switch to "Standard Mode (PCMU)" below — it uses less internet and often sounds better on slower connections
-            </div>`;
-
-            // Echo tip
-            cards += `<div class="audio-tip">
-                <strong>🔊 Echo / Feedback Tip</strong><br>
-                If the person you call hears themselves echoing:<br>
-                • Use headphones instead of speakers — this eliminates echo completely<br>
-                • Lower your speaker volume<br>
-                • Move your microphone further from your speakers
-            </div>`;
-
-            document.getElementById('audioResultCards').innerHTML = cards;
-
-            // Update codec button states
-            document.getElementById('codecOpusBtn').style.border = preferredCodec === 'opus' ? '2px solid var(--primary)' : '2px solid var(--border-color)';
-            document.getElementById('codecOpusBtn').style.background = preferredCodec === 'opus' ? 'rgba(0,123,255,0.1)' : 'none';
-            document.getElementById('codecPcmuBtn').style.border = preferredCodec === 'pcmu' ? '2px solid var(--primary)' : '2px solid var(--border-color)';
-            document.getElementById('codecPcmuBtn').style.background = preferredCodec === 'pcmu' ? 'rgba(0,123,255,0.1)' : 'none';
-
-        }, 5000);
-    }
-
-    function openAudioTestModal() {
-        document.getElementById('audioTestMsg').textContent = 'Click "Start Test" to check your audio';
-        document.getElementById('audioTestBar').style.display = 'none';
-        document.getElementById('audioTestResults').style.display = 'none';
-        document.getElementById('audioTestStartBtn').disabled = false;
-        document.getElementById('audioTestStartBtn').textContent = '▶ Start Test (5 sec)';
-        document.getElementById('audioTestModal').style.display = 'block';
-    }
-
-    // ── ADD LEAD ──────────────────────────────────────────────────────────
-    function openAddLeadModal() {
-        ['addLeadName','addLeadPhone','addLeadEmail','addLeadResort','addLeadCity'].forEach(id => {
-            document.getElementById(id).value = '';
-        });
-        document.getElementById('addLeadModal').style.display = 'block';
-    }
-
-    function saveAddLead() {
-        const name  = document.getElementById('addLeadName').value.trim();
-        const phone = document.getElementById('addLeadPhone').value.replace(/\D/g,'');
-        if (!name)  return alert('Please enter a name.');
-        if (phone.length < 10) return alert('Please enter a valid phone number.');
-        if (leads.some(l => l.phone === phone)) return alert('This phone number is already in your list.');
-        const bucket = leads.length % ACTIVE_NUMBER_COUNT;
-        const city   = document.getElementById('addLeadCity').value.trim() || getCityFromPhone(phone);
-        leads.push({
-            id: 'L-' + Math.random().toString(36).substr(2, 9),
-            name,
-            phone,
-            email:   document.getElementById('addLeadEmail').value.trim(),
-            resort:  document.getElementById('addLeadResort').value.trim() || 'Manual',
-            city,
-            calls:   0,
-            appointment: null,
-            notes:   '',
-            hidden:  false,
-            disposition: '',
-            bucket,
-            twilioNumber: TWILIO_NUMBERS[bucket],
-            lastCalledDate: null
-        });
-        save(); closeModal('addLeadModal'); renderLeads(); updateFilterResorts(); updateSmartQueueCount();
-        alert(`"${name}" added successfully!`);
-    }
-
-    // ── CUSTOM QUEUE (kept for internal use) ──────────────────────────────
-    function openCustomQueueModal() {
-        const sel = document.getElementById('customResortSelect');
-        const resorts = [...new Set(leads.map(l => l.resort))].filter(Boolean);
-        sel.innerHTML = `<option value="">All Resorts</option>` + resorts.map(r => `<option value="${r}">${r}</option>`).join('');
-        document.getElementById('customQueueModal').style.display = 'block';
-    }
-
-    function buildCustomQueue() {
-        const resort   = document.getElementById('customResortSelect').value;
-        const max      = parseInt(document.getElementById('customQueueMax').value) || 50;
-        const freshOnly= document.getElementById('customOnlyFresh').checked;
-        let pool = leads.filter(l => !l.hidden);
-        if (resort) pool = pool.filter(l => l.resort === resort);
-        if (freshOnly) pool = pool.filter(l => l.lastCalledDate !== luxon.DateTime.now().toISODate());
-        if (!pool.length) return alert('No leads match those filters.');
-        callQueue = shuffle(pool).slice(0, max);
-        queueIndex = 0;
-        saveQueue(); updateQueueUI();
-        closeModal('customQueueModal');
-        openDialerModal();
-    }
-
-    // ── IMPORT ────────────────────────────────────────────────────────────
-    document.getElementById('fileInput').onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
-            window.tempData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-            if (!window.tempData.length) return alert('File is empty.');
-            const cols = Object.keys(window.tempData[0]);
-            ['mapNameSelect','mapPhoneSelect','mapEmailSelect','mapResortSelect','mapCitySelect','mapCallsSelect','mapApptSelect','mapNotesSelect'].forEach(id => {
-                const s = document.getElementById(id);
-                s.innerHTML = `<option value="">-- None --</option>` + cols.map(c => `<option value="${c}">${c}</option>`).join('');
-                if (id === 'mapNameSelect')  s.value = cols.find(c => /name/i.test(c))         || '';
-                if (id === 'mapPhoneSelect') s.value = cols.find(c => /phone|number/i.test(c)) || '';
-                if (id === 'mapResortSelect')s.value = cols.find(c => /resort/i.test(c))       || '';
-                if (id === 'mapCitySelect')  s.value = cols.find(c => /city|state/i.test(c))   || '';
-            });
-            document.getElementById('excelMapModal').style.display = 'block';
-        };
-        reader.readAsArrayBuffer(file);
-        e.target.value = '';
-    };
-
-    function finalizeImport() {
-        const nC = document.getElementById('mapNameSelect').value;
-        const pC = document.getElementById('mapPhoneSelect').value;
-        if (!nC || !pC) return alert('Name and Phone columns are required.');
-        const rC    = document.getElementById('mapResortSelect').value;
-        const cC    = document.getElementById('mapCitySelect').value;
-        const eC    = document.getElementById('mapEmailSelect').value;
-        const callC = document.getElementById('mapCallsSelect').value;
-        const apptC = document.getElementById('mapApptSelect').value;
-        const notesC= document.getElementById('mapNotesSelect').value;
-        let added = 0;
-        window.tempData.forEach((row) => {
-            const ph = String(row[pC] || '').replace(/\D/g, '');
-            if (!ph || leads.some(l => l.phone === ph)) return;
-            const bucket = added % ACTIVE_NUMBER_COUNT;
-            leads.push({
-                id: 'L-' + Math.random().toString(36).substr(2, 9),
-                name:  row[nC] || 'Unknown',
-                phone: ph,
-                email: eC    ? (row[eC]    || '')   : '',
-                resort:rC    ? (row[rC]    || 'Batch'): 'Batch',
-                city:  cC    ? (row[cC]    || getCityFromPhone(ph)) : getCityFromPhone(ph),
-                calls: callC ? (parseInt(row[callC]) || 0) : 0,
-                appointment: apptC ? (row[apptC] || null) : null,
-                notes: notesC? (row[notesC] || '')  : '',
-                hidden: false,
-                disposition: '',
-                bucket,
-                twilioNumber: TWILIO_NUMBERS[bucket],
-                lastCalledDate: null
-            });
-            added++;
-        });
-        save(); closeModal('excelMapModal'); renderLeads(); updateFilterResorts(); updateSmartQueueCount();
-        alert(`Import complete! Added ${added} leads.`);
-    }
-
-    // ── RENDER ────────────────────────────────────────────────────────────
-    function renderLeads() {
-        const body         = document.getElementById('leadBody');
-        const query        = document.getElementById('searchInput').value.toLowerCase();
-        const resort       = document.getElementById('resortFilter').value;
-        const noConnectOnly= document.getElementById('noConnectFilter').checked;
-
-        let filtered = leads.filter(l => {
-            if (!showHidden && l.hidden) return false;
-            if (resort && l.resort !== resort) return false;
-            if (noConnectOnly && l.disposition !== 'no_connect') return false;
-            return l.name.toLowerCase().includes(query) || l.phone.includes(query);
-        });
-
-        filtered.sort((a, b) => {
-            let va = a[sortKey] ?? '', vb = b[sortKey] ?? '';
-            if (va === '') return 1; if (vb === '') return -1;
-            return (typeof va === 'string' ? va.localeCompare(vb) : va - vb) * sortDir;
-        });
-
-        const start  = (currentPage - 1) * leadsPerPage;
-        const slice  = filtered.slice(start, start + leadsPerPage);
-        const pendingCallbackIds = new Set(callbacks.filter(cb => !cb.notified).map(cb => cb.leadId));
-
-        body.innerHTML = slice.map(l => `
-            <tr class="${l.hidden ? 'is-hidden-row' : ''} ${l.disposition === 'no_connect' ? 'no-connect' : ''} ${pendingCallbackIds.has(l.id) ? 'has-callback' : ''}" onclick="openProfile('${l.id}')">
-                <td><b>${l.name}</b>${pendingCallbackIds.has(l.id) ? ' 📅' : ''}</td>
-                <td style="font-family:monospace;">${formatPhone(l.phone)}</td>
-                <td>${getLocalTimeForLead(l.phone)}</td>
-                <td>${l.city || getCityFromPhone(l.phone)}</td>
-                <td>${l.resort || '-'}</td>
-                <td>${l.appointment ? l.appointment.replace('T',' ') : '-'}</td>
-                <td><button onclick="event.stopPropagation();logCallAndHide('${l.id}')" class="btn-primary" style="font-size:0.8em;padding:6px 12px;">CALL (${l.calls || 0})</button></td>
-            </tr>
-        `).join('');
-
-        const totalPages = Math.max(1, Math.ceil(filtered.length / leadsPerPage));
-        document.getElementById('pageInfo').innerText = `Page ${currentPage} / ${totalPages}`;
-        updateStats();
-        renderApptsSidebar();
-        renderCallLog();
-    }
-
-    // ── PROFILE ───────────────────────────────────────────────────────────
-    function openProfile(id) {
-        const l = leads.find(x => x.id === id);
-        if (!l) return;
-        currentProfileId = id;
-        document.getElementById('profileName').textContent    = l.name;
-        document.getElementById('profileNameEdit').value      = l.name;
-        document.getElementById('profilePhoneEdit').value     = formatPhone(l.phone);
-        document.getElementById('profilePhone').textContent   = formatPhone(l.phone);
-        document.getElementById('profileCity').textContent    = l.city || getCityFromPhone(l.phone);
-        document.getElementById('profileResort').textContent  = l.resort || '-';
-        document.getElementById('profileCalls').textContent   = l.calls || 0;
-        document.getElementById('profileLast').textContent    = l.lastCalledDate || 'Never';
-        document.getElementById('profileEmail').value         = l.email || '';
-        document.getElementById('profileAppt').value          = l.appointment || '';
-        document.getElementById('profileNotes').value         = l.notes || '';
-        document.getElementById('profileTwilioNumber').textContent = formatPhone(l.twilioNumber || TWILIO_NUMBERS[0]);
-        document.getElementById('emailOutputs').innerHTML     = '';
-        document.querySelectorAll('input[name="emailTemplate"]').forEach(c => c.checked = false);
-        document.getElementById('profileCallbackDateTime').value = '';
-        const btn = document.getElementById('profileCallNowBtn');
-        btn.disabled = false; btn.innerText = '📲 CALL NOW';
-        document.getElementById('profileCallStatus').style.display = 'none';
-        hideDTMF();
-        renderProfileRecordings(id);
-        document.getElementById('profileModal').style.display = 'block';
-    }
-
-    function saveProfile() {
-        const l = leads.find(x => x.id === currentProfileId);
-        if (l) {
-            const newName  = document.getElementById('profileNameEdit').value.trim();
-            const newPhone = document.getElementById('profilePhoneEdit').value.replace(/\D/g,'');
-            if (newName)  l.name  = newName;
-            if (newPhone.length >= 10) { l.phone = newPhone; l.city = l.city || getCityFromPhone(newPhone); }
-            l.email       = document.getElementById('profileEmail').value;
-            l.appointment = document.getElementById('profileAppt').value || null;
-            l.notes       = document.getElementById('profileNotes').value;
-            save(); renderLeads(); updateSmartQueueCount();
-        }
-        closeModal('profileModal');
-    }
-
-    // ── EMAIL TEMPLATES ───────────────────────────────────────────────────
-    function getDefaultTemplates() {
-        const sig = JSON.parse(localStorage.getItem(KEY_SIG) || '{}');
-        const sigBlock = `\n\nBest regards,\n${sig.name || 'Your Name'}\n${sig.title || 'Vacation Consultant'}\n${sig.phone || ''}${sig.ext ? ' ext. ' + sig.ext : ''}`;
-        return {
-            inquiry:       `Subject: Following Up on Your Inquiry\n\nHi {lastName},\n\nThank you for your interest in {resort}. I wanted to follow up and answer any questions you may have about your vacation options.${sigBlock}`,
-            thankyou_quick:`Subject: Thank You for Speaking With Us\n\nHi {lastName},\n\nThank you for taking my call today regarding {resort}. It was great speaking with you. I'll be in touch shortly with more details.${sigBlock}`,
-            followup_long: `Subject: Checking Back In — {resort}\n\nHi {lastName},\n\nI wanted to circle back and see if you had any questions since we last spoke about {resort}. We have some exciting options available.${sigBlock}`
-        };
-    }
-
-    function openEditTemplatesModal() {
-        const saved  = JSON.parse(localStorage.getItem(KEY_TEMPLATES) || '{}');
-        const dflt   = getDefaultTemplates();
-        const sig    = JSON.parse(localStorage.getItem(KEY_SIG) || '{}');
-        document.getElementById('tplInquiry').value  = saved.inquiry       || dflt.inquiry;
-        document.getElementById('tplThankyou').value = saved.thankyou_quick|| dflt.thankyou_quick;
-        document.getElementById('tplFollowup').value = saved.followup_long || dflt.followup_long;
-        document.getElementById('sigName').value     = sig.name  || '';
-        document.getElementById('sigTitle').value    = sig.title || '';
-        document.getElementById('sigPhone').value    = sig.phone || '';
-        document.getElementById('sigExt').value      = sig.ext   || '';
-        document.getElementById('editTemplatesModal').style.display = 'block';
-    }
-
-    function saveEmailTemplates() {
-        const templates = {
-            inquiry:       document.getElementById('tplInquiry').value,
-            thankyou_quick:document.getElementById('tplThankyou').value,
-            followup_long: document.getElementById('tplFollowup').value
-        };
-        const sig = {
-            name:  document.getElementById('sigName').value,
-            title: document.getElementById('sigTitle').value,
-            phone: document.getElementById('sigPhone').value,
-            ext:   document.getElementById('sigExt').value
-        };
-        localStorage.setItem(KEY_TEMPLATES, JSON.stringify(templates));
-        localStorage.setItem(KEY_SIG, JSON.stringify(sig));
-        closeModal('editTemplatesModal');
-        alert('Templates saved! They will be used from now on when you generate emails.');
-    }
-
-    function generateEmailTemplates() {
-        const l = leads.find(x => x.id === currentProfileId);
-        if (!l) return;
-        const checked = [...document.querySelectorAll('input[name="emailTemplate"]:checked')].map(c => c.value);
-        if (!checked.length) return alert('Select at least one template.');
-
-        const saved  = JSON.parse(localStorage.getItem(KEY_TEMPLATES) || '{}');
-        const dflt   = getDefaultTemplates();
-        const merged = { ...dflt, ...saved };
-
-        const nameParts = l.name.split(' ');
-        const firstName = nameParts[0] || l.name;
-        const lastName  = nameParts.length > 1 ? nameParts[nameParts.length - 1] : l.name;
-        const resort    = l.resort || 'your resort';
-
-        document.getElementById('emailOutputs').innerHTML = checked.map(k => {
-            let text = merged[k] || dflt[k] || '';
-            text = text
-                .replace(/\{firstName\}/g, firstName)
-                .replace(/\{lastName\}/g, lastName)
-                .replace(/\{resort\}/g, resort);
-            return `
-            <div style="margin-bottom:12px;">
-                <label style="text-transform:none;font-size:0.85em;color:var(--primary);">${k.replace('_', ' ').toUpperCase()}</label>
-                <textarea style="height:130px;font-size:0.8em;">${text}</textarea>
-            </div>`;
-        }).join('');
-    }
-
-    // ── SIDEBAR ───────────────────────────────────────────────────────────
-    function renderApptsSidebar() {
-        const list = document.getElementById('appointmentList');
-        const upcoming = leads.filter(l => l.appointment).sort((a,b) => a.appointment.localeCompare(b.appointment));
-        list.innerHTML = upcoming.slice(0,5).map(l => `
-            <div onclick="openProfile('${l.id}')" style="background:rgba(0,123,255,0.05);padding:8px;border-radius:8px;margin-bottom:5px;font-size:0.8em;cursor:pointer;">
-                <b>${l.name}</b><br>${l.appointment.replace('T',' ')}
-            </div>
-        `).join('') || '<div style="font-size:0.8em;color:#718096;">No upcoming appointments.</div>';
-    }
-
-    function renderCallLog() {
-        const list = document.getElementById('callLogList');
-        const logs  = leads.filter(l => l.calls > 0).sort((a,b) => (b.lastCalledDate||'').localeCompare(a.lastCalledDate||''));
-        list.innerHTML = logs.slice(0,15).map(l => `
-            <div onclick="openProfile('${l.id}')" class="log-entry">
-                <b>${l.name}</b> ${l.disposition==='no_connect'?'❌':l.disposition==='vm'?'📬':'📞'}<br>
-                <small>${l.lastCalledDate||''} | ${l.resort||'-'}</small>
-            </div>
-        `).join('') || '<div style="font-size:0.8em;color:#718096;">No calls logged yet.</div>';
-    }
-
-    // ── STATS ─────────────────────────────────────────────────────────────
-    function updateStats() {
-        document.getElementById('statTotal').innerText    = leads.length;
-        document.getElementById('statCalled').innerText   = leads.filter(l => (l.calls||0) > 0).length;
-        document.getElementById('statCallsToday').innerText= leads.reduce((s,l) => s+(l.calls||0), 0);
-        document.getElementById('statZeroDial').innerText = leads.filter(l => !(l.calls||0) && !l.hidden).length;
-        const finished = leads.filter(l => l.hidden).length;
-        const perc = leads.length ? Math.round((finished/leads.length)*100) : 0;
-        document.getElementById('progressLabel').innerText= `LIST PROGRESS: ${perc}%`;
-        document.getElementById('progressCount').innerText= `${finished} / ${leads.length} Finished`;
-        document.getElementById('progressBar').style.width= perc + '%';
-    }
-
-    function updateQueueUI() {
-        const bar = document.getElementById('activeQueueBar');
-        if (!callQueue.length) { bar.style.display='none'; return; }
-        bar.style.display = 'flex';
-        document.getElementById('queueProgress').textContent  = `Playing ${queueIndex+1} of ${callQueue.length}`;
-        document.getElementById('queueCurrentName').textContent = callQueue[queueIndex]?.name || '';
-    }
-
-    function updateFilterResorts() {
-        const sel = document.getElementById('resortFilter');
-        const resorts = [...new Set(leads.map(l => l.resort))].filter(Boolean).sort();
-        sel.innerHTML = `<option value="">All Resorts</option>` + resorts.map(r => `<option value="${r}">${r}</option>`).join('');
-    }
-
-    function sortBy(key) {
-        if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = 1; }
-        currentPage = 1; renderLeads();
-    }
-
-    function changePage(d) { currentPage = Math.max(1, currentPage+d); renderLeads(); }
-    function toggleTheme() {
-        const dark = document.body.getAttribute('data-theme') === 'dark';
-        document.body.setAttribute('data-theme', dark ? 'light' : 'dark');
-        document.getElementById('themeBtn').innerText = dark ? '🌞' : '🌙';
-    }
-
-    // ── EXPORTS ───────────────────────────────────────────────────────────
-    function exportToExcel(data, filename) {
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Data');
-        XLSX.writeFile(wb, filename);
-    }
-
-    function exportAnsweredLeads() {
-        const data = leads
-            .filter(l => (l.calls||0) > 0 && l.disposition !== 'no_connect')
-            .map(l => ({ Name:l.name, Phone:formatPhone(l.phone), Resort:l.resort, City:l.city, Calls:l.calls||0, Disposition:l.disposition||'', LastCalled:l.lastCalledDate||'', Appointment:l.appointment||'', Notes:l.notes||'' }));
-        if (!data.length) return alert('No answered leads to export yet.');
-        exportToExcel(data, `answered_leads_${luxon.DateTime.now().toISODate()}.xlsx`);
-    }
-
-    function exportWeeklyRecap() {
-        const data = leads.map(l => ({ Name:l.name, Phone:formatPhone(l.phone), Resort:l.resort, City:l.city, Calls:l.calls||0, Disposition:l.disposition||'', LastCalled:l.lastCalledDate||'', Appointment:l.appointment||'', TwilioNumber:l.twilioNumber||'', Notes:l.notes||'' }));
-        exportToExcel(data, `weekly_recap_${luxon.DateTime.now().toISODate()}.xlsx`);
-    }
-
-    function exportNoConnectOnly() {
-        const data = leads.filter(l => l.disposition==='no_connect').map(l => ({ Name:l.name, Phone:formatPhone(l.phone), Resort:l.resort, City:l.city, Calls:l.calls||0, LastCalled:l.lastCalledDate||'' }));
-        if (!data.length) return alert('No no-connect leads to export.');
-        exportToExcel(data, `no_connect_${luxon.DateTime.now().toISODate()}.xlsx`);
-    }
-
-    function exportCarryOverLeads() {
-        const today = luxon.DateTime.now().toISODate();
-        const data = leads.filter(l => !l.hidden && l.lastCalledDate !== today && !(l.calls||0)).map(l => ({ Name:l.name, Phone:formatPhone(l.phone), Resort:l.resort, City:l.city }));
-        if (!data.length) return alert('No carry-over leads found.');
-        exportToExcel(data, `carry_over_${luxon.DateTime.now().toISODate()}.xlsx`);
-    }
-
-    function resetHiddenLeads() {
-        if (!confirm('Unhide all leads and reset daily tracking for a new day?')) return;
-        leads.forEach(l => { l.hidden=false; l.lastCalledDate=null; });
-        save(); renderLeads(); alert('Reset complete.');
-    }
-
-    function deleteAllLeads() {
-        if (!confirm('DELETE ALL LEADS? This cannot be undone.')) return;
-        leads=[]; callQueue=[]; queueIndex=0;
-        save(); saveQueue(); renderLeads(); updateFilterResorts(); updateSmartQueueCount();
-    }
-
-    // ── UTILS ─────────────────────────────────────────────────────────────
-    function save()      { localStorage.setItem(KEY_LEADS, JSON.stringify(leads)); }
-    function saveQueue() { localStorage.setItem(KEY_QUEUE, JSON.stringify(callQueue)); localStorage.setItem(KEY_INDEX, String(queueIndex)); }
-    function closeModal(id) { document.getElementById(id).style.display='none'; }
-    function shuffle(arr)   { return [...arr].sort(() => 0.5-Math.random()); }
-
-    function formatPhone(num) {
-        const s = String(num).replace(/\D/g,'');
-        if (s.length===11) return `+${s[0]} (${s.slice(1,4)}) ${s.slice(4,7)}-${s.slice(7)}`;
-        if (s.length===10) return `(${s.slice(0,3)}) ${s.slice(3,6)}-${s.slice(6)}`;
-        return num;
-    }
-
-    const areaCodeToCity = {"201":"Jersey City, NJ","202":"Washington, DC","203":"Bridgeport, CT","205":"Birmingham, AL","206":"Seattle, WA","207":"Portland, ME","208":"Boise, ID","209":"Stockton, CA","210":"San Antonio, TX","212":"New York, NY","213":"Los Angeles, CA","214":"Dallas, TX","215":"Philadelphia, PA","216":"Cleveland, OH","217":"Springfield, IL","218":"Duluth, MN","219":"Hammond, IN","224":"Elgin, IL","225":"Baton Rouge, LA","228":"Gulfport, MS","229":"Albany, GA","231":"Muskegon, MI","234":"Akron, OH","239":"Cape Coral, FL","240":"Germantown, MD","248":"Troy, MI","251":"Mobile, AL","252":"Greenville, NC","253":"Tacoma, WA","254":"Killeen, TX","256":"Huntsville, AL","260":"Fort Wayne, IN","262":"Kenosha, WI","267":"Philadelphia, PA","269":"Kalamazoo, MI","270":"Bowling Green, KY","272":"Scranton, PA","276":"Bristol, VA","281":"Houston, TX","301":"Germantown, MD","302":"Wilmington, DE","303":"Denver, CO","304":"Charleston, WV","305":"Miami, FL","307":"Cheyenne, WY","308":"Grand Island, NE","309":"Peoria, IL","310":"Santa Monica, CA","312":"Chicago, IL","313":"Detroit, MI","314":"St. Louis, MO","315":"Syracuse, NY","316":"Wichita, KS","317":"Indianapolis, IN","318":"Shreveport, LA","319":"Cedar Rapids, IA","320":"St. Cloud, MN","321":"Orlando, FL","323":"Los Angeles, CA","325":"Abilene, TX","330":"Akron, OH","331":"Aurora, IL","334":"Montgomery, AL","336":"Greensboro, NC","337":"Lafayette, LA","339":"Saugus, MA","347":"New York, NY","351":"Lowell, MA","352":"Gainesville, FL","360":"Vancouver, WA","361":"Corpus Christi, TX","385":"Salt Lake City, UT","386":"Palm Coast, FL","401":"Providence, RI","402":"Omaha, NE","404":"Atlanta, GA","405":"Oklahoma City, OK","406":"Billings, MT","407":"Orlando, FL","408":"San Jose, CA","409":"Beaumont, TX","410":"Baltimore, MD","412":"Pittsburgh, PA","413":"Springfield, MA","414":"Milwaukee, WI","415":"San Francisco, CA","417":"Springfield, MO","419":"Toledo, OH","423":"Chattanooga, TN","424":"Santa Monica, CA","425":"Bellevue, WA","430":"Tyler, TX","432":"Midland, TX","434":"Lynchburg, VA","435":"St. George, UT","440":"Parma, OH","442":"Oceanside, CA","443":"Baltimore, MD","458":"Eugene, OR","469":"Dallas, TX","470":"Atlanta, GA","475":"Bridgeport, CT","478":"Macon, GA","479":"Fort Smith, AR","480":"Mesa, AZ","484":"Allentown, PA","501":"Little Rock, AR","502":"Louisville, KY","503":"Portland, OR","504":"New Orleans, LA","505":"Albuquerque, NM","507":"Rochester, MN","508":"Worcester, MA","509":"Spokane, WA","510":"Oakland, CA","512":"Austin, TX","513":"Cincinnati, OH","515":"Des Moines, IA","516":"Hempstead, NY","517":"Lansing, MI","518":"Albany, NY","520":"Tucson, AZ","530":"Redding, CA","531":"Omaha, NE","534":"Eau Claire, WI","539":"Tulsa, OK","540":"Roanoke, VA","541":"Eugene, OR","551":"Jersey City, NJ","559":"Fresno, CA","561":"West Palm Beach, FL","562":"Long Beach, CA","563":"Davenport, IA","567":"Toledo, OH","570":"Scranton, PA","571":"Arlington, VA","573":"Columbia, MO","574":"South Bend, IN","575":"Las Cruces, NM","585":"Rochester, NY","586":"Warren, MI","601":"Jackson, MS","602":"Phoenix, AZ","603":"Manchester, NH","605":"Sioux Falls, SD","606":"Ashland, KY","607":"Binghamton, NY","608":"Madison, WI","609":"Trenton, NJ","610":"Allentown, PA","612":"Minneapolis, MN","614":"Columbus, OH","615":"Nashville, TN","616":"Grand Rapids, MI","617":"Boston, MA","618":"Belleville, IL","619":"San Diego, CA","620":"Hutchinson, KS","623":"Glendale, AZ","626":"Pasadena, CA","629":"Nashville, TN","630":"Aurora, IL","631":"Brentwood, NY","636":"O'Fallon, MO","641":"Mason City, IA","646":"New York, NY","650":"San Mateo, CA","651":"St. Paul, MN","657":"Anaheim, CA","660":"Sedalia, MO","661":"Bakersfield, CA","662":"Southaven, MS","667":"Baltimore, MD","669":"San Jose, CA","678":"Atlanta, GA","681":"Charleston, WV","682":"Fort Worth, TX","701":"Fargo, ND","702":"Las Vegas, NV","703":"Arlington, VA","704":"Charlotte, NC","706":"Augusta, GA","707":"Santa Rosa, CA","708":"Cicero, IL","712":"Sioux City, IA","713":"Houston, TX","714":"Anaheim, CA","715":"Eau Claire, WI","716":"Buffalo, NY","717":"Lancaster, PA","718":"New York, NY","719":"Colorado Springs, CO","720":"Denver, CO","724":"New Castle, PA","727":"St. Petersburg, FL","731":"Jackson, TN","732":"Edison, NJ","734":"Ann Arbor, MI","737":"Austin, TX","740":"Newark, OH","747":"Los Angeles, CA","754":"Fort Lauderdale, FL","757":"Virginia Beach, VA","760":"Oceanside, CA","762":"Augusta, GA","763":"Brooklyn Park, MN","765":"Muncie, IN","769":"Jackson, MS","770":"Atlanta, GA","772":"Port St. Lucie, FL","773":"Chicago, IL","774":"Worcester, MA","775":"Reno, NV","779":"Rockford, IL","781":"Waltham, MA","785":"Topeka, KS","786":"Miami, FL","801":"Salt Lake City, UT","802":"Burlington, VT","803":"Columbia, SC","804":"Richmond, VA","805":"Oxnard, CA","806":"Lubbock, TX","808":"Honolulu, HI","810":"Flint, MI","812":"Evansville, IN","813":"Tampa, FL","814":"Erie, PA","815":"Rockford, IL","816":"Kansas City, MO","817":"Fort Worth, TX","818":"Los Angeles, CA","828":"Asheville, NC","830":"New Braunfels, TX","831":"Salinas, CA","832":"Houston, TX","843":"Charleston, SC","845":"New City, NY","847":"Elgin, IL","848":"Edison, NJ","850":"Tallahassee, FL","854":"Charleston, SC","856":"Camden, NJ","857":"Boston, MA","858":"San Diego, CA","859":"Lexington, KY","860":"Hartford, CT","862":"Newark, NJ","863":"Lakeland, FL","864":"Greenville, SC","865":"Knoxville, TN","870":"Jonesboro, AR","872":"Chicago, IL","878":"Pittsburgh, PA","901":"Memphis, TN","903":"Tyler, TX","904":"Jacksonville, FL","907":"Anchorage, AK","908":"Elizabeth, NJ","909":"San Bernardino, CA","910":"Fayetteville, NC","912":"Savannah, GA","913":"Overland Park, KS","914":"Yonkers, NY","915":"El Paso, TX","916":"Sacramento, CA","917":"New York, NY","918":"Tulsa, OK","919":"Raleigh, NC","920":"Green Bay, WI","925":"Concord, CA","928":"Yuma, AZ","929":"New York, NY","931":"Clarksville, TN","936":"Conroe, TX","937":"Dayton, OH","938":"Huntsville, AL","940":"Denton, TX","941":"North Port, FL","947":"Troy, MI","949":"Irvine, CA","951":"Riverside, CA","952":"Bloomington, MN","954":"Fort Lauderdale, FL","956":"Laredo, TX","959":"Hartford, CT","970":"Fort Collins, CO","971":"Portland, OR","972":"Dallas, TX","973":"Newark, NJ","978":"Lowell, MA","979":"College Station, TX","980":"Charlotte, NC","984":"Raleigh, NC","985":"Houma, LA","989":"Saginaw, MI"};
-
-    function getCityFromPhone(ph) {
-        const c  = String(ph).replace(/\D/g,'');
-        const ac = c.length>=10 ? c.substring(c.length-10, c.length-7) : '';
-        return areaCodeToCity[ac] || 'Unknown';
-    }
-
-    function getLocalTimeForLead(ph) {
-        const c  = String(ph).replace(/\D/g,'');
-        const ac = c.length>=10 ? c.substring(c.length-10, c.length-7) : '';
-        const zones = {
-            'America/Chicago':['205','210','225','228','312','314','318','337','402','405','414','501','504','512','515','601','612','615','630','636','651','682','713','715','731','769','816','817','832','870','901','903','913','918','931','936','940','956','972','979','985'],
-            'America/Denver':['303','307','385','406','435','505','719','720','801','928','970'],
-            'America/Los_Angeles':['206','213','253','310','323','360','408','415','424','442','503','509','510','530','541','559','562','619','626','650','657','661','669','702','707','714','747','760','775','805','818','831','858','916','925','949','951','971']
-        };
-        let zone = 'America/New_York';
-        for (const [z, codes] of Object.entries(zones)) {
-            if (codes.includes(ac)) { zone=z; break; }
-        }
-        return luxon.DateTime.now().setZone(zone).toFormat('hh:mm a');
-    }
-</script>
+    const BAND_BIO_EN = "Soul Faith is a hard rock band from Guasave, Sinaloa, Mexico. Founded in 2009, they began playing classic rock covers — hard rock, glam, and thrash from the old school. In 2013 they released their first original album, <em>Ganamos un Ángel</em>. Over the years they have shared the stage with Molotov, Cartel de Santa, La Cuca, La Maldita Vecindad, Javier Batiz, Rostros Ocultos, Genitallica, Plastiko, and more — cementing their place as one of Sinaloa's premier rock acts.";
+    const BAND_BIO_ES = "Soul Faith es una banda de hard rock originaria de Guasave, Sinaloa, México. Fundada en 2009, comenzaron tocando covers de la gran vieja escuela del rock and roll, hard rock, glamm y thrash. En 2013 lanzaron su primer álbum original, <em>Ganamos un Ángel</em>. A lo largo de los años han abierto conciertos para Molotov, Cartel de Santa, La Cuca, La Maldita Vecindad, Javier Batiz, Rostros Ocultos, Genitallica, Plastiko y más — consolidándose como una de las bandas de rock más destacadas de Sinaloa.";
+
+    // TODO: Add tour events when confirmed
+    // { date:"2025-08-15", venue:"El Plaza Condesa", city:"Mexico City, MX", ticketUrl:"#" }
+    const TOUR_EVENTS = [];
+
+    // TODO: Replace with real next show date/name
+    const NEXT_SHOW_DATE   = "2025-12-31T21:00:00";
+    const NEXT_SHOW_NAME   = "UPCOMING SHOW — TBA";
+    const NEXT_SHOW_NAMEES = "PRÓXIMO SHOW — POR ANUNCIAR";
+
+    // TODO: Go to youtube.com/@jou8aaxel → click each video → copy ID from URL after ?v=
+    const VIDEOS = [
+      { id:"VIDEO_ID_1", titleEn:"Soul Faith - Biker",   titleEs:"Soul Faith - Biker" },
+      { id:"VIDEO_ID_2", titleEn:"Soul Faith - Video 2", titleEs:"Soul Faith - Video 2" },
+      { id:"VIDEO_ID_3", titleEn:"Soul Faith - Video 3", titleEs:"Soul Faith - Video 3" },
+      { id:"VIDEO_ID_4", titleEn:"Soul Faith - Video 4", titleEs:"Soul Faith - Video 4" },
+      { id:"VIDEO_ID_5", titleEn:"Soul Faith - Video 5", titleEs:"Soul Faith - Video 5" },
+      { id:"VIDEO_ID_6", titleEn:"Soul Faith - Video 6", titleEs:"Soul Faith - Video 6" },
+    ];
+
+    // TODO: Add real merch items — imageUrl = hosted image link (Imgur, Cloudinary, etc.)
+    const MERCH_ITEMS = [
+      { nameEn:"Band T-Shirt", nameEs:"Camiseta", price:"$25.00", imageUrl:"", buyUrl:"#" },
+      { nameEn:"Hoodie",       nameEs:"Sudadera", price:"$45.00", imageUrl:"", buyUrl:"#" },
+      { nameEn:"Poster",       nameEs:"Póster",   price:"$15.00", imageUrl:"", buyUrl:"#" },
+      { nameEn:"Hat",          nameEs:"Gorra",    price:"$20.00", imageUrl:"", buyUrl:"#" },
+    ];
+
+    /* ============ LANGUAGE ============ */
+    let currentLang = 'en';
+    function setLang(lang) {
+      currentLang = lang;
+      document.getElementById('btn-en').classList.toggle('active', lang==='en');
+      document.getElementById('btn-es').classList.toggle('active', lang==='es');
+      document.querySelectorAll('[data-lang-en]').forEach(el => { el.innerHTML = lang==='en' ? el.dataset.langEn : el.dataset.langEs; });
+      document.getElementById('countdown-event-name').textContent = lang==='en' ? NEXT_SHOW_NAME : NEXT_SHOW_NAMEES;
+      document.getElementById('band-bio-text').innerHTML = lang==='en' ? BAND_BIO_EN : BAND_BIO_ES;
+      renderVideos(); renderMerch();
+    }
+
+    /* ============ PAGE TRANSITIONS ============ */
+    function showPage(name) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      const t = document.getElementById('page-'+name);
+      if (t) setTimeout(() => t.classList.add('active'), 10);
+      window.scrollTo(0,0); return false;
+    }
+
+    /* ============ COUNTDOWN ============ */
+    function updateCountdown() {
+      const diff = new Date(NEXT_SHOW_DATE).getTime() - Date.now();
+      if (diff <= 0) return;
+      const pad = n => String(Math.floor(n)).padStart(2,'0');
+      document.getElementById('cd-days').textContent    = pad(diff/86400000);
+      document.getElementById('cd-hours').textContent   = pad((diff%86400000)/3600000);
+      document.getElementById('cd-minutes').textContent = pad((diff%3600000)/60000);
+      document.getElementById('cd-seconds').textContent = pad((diff%60000)/1000);
+    }
+    document.getElementById('countdown-event-name').textContent = NEXT_SHOW_NAME;
+    updateCountdown(); setInterval(updateCountdown, 1000);
+
+    /* ============ WEEK CALENDAR ============ */
+    let weekOffset = 0;
+    const DAYS_EN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const DAYS_ES=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    function changeWeek(d) { weekOffset+=d; renderWeek(); }
+    function renderWeek() {
+      const today=new Date(), start=new Date(today);
+      start.setDate(today.getDate()-today.getDay()+weekOffset*7);
+      const end=new Date(start); end.setDate(start.getDate()+6);
+      const names=currentLang==='es'?DAYS_ES:DAYS_EN;
+      document.getElementById('week-title').textContent=start.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' – '+end.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      const grid=document.getElementById('week-grid'); grid.innerHTML='';
+      for(let i=0;i<7;i++){
+        const day=new Date(start); day.setDate(start.getDate()+i);
+        const ds=day.toISOString().split('T')[0];
+        const isToday=day.toDateString()===today.toDateString();
+        const events=TOUR_EVENTS.filter(e=>e.date===ds);
+        const cell=document.createElement('div');
+        cell.className='week-day'+(isToday?' today':'')+(events.length?' has-event':'');
+        cell.innerHTML=`<div class="day-name">${names[day.getDay()]}</div><div class="day-number">${day.getDate()}</div>${events.map(e=>`<div class="day-event">${e.venue}</div>`).join('')}`;
+        grid.appendChild(cell);
+      }
+    }
+    renderWeek();
+    function renderTourList() {
+      const list=document.getElementById('tour-dates-list');
+      const upcoming=TOUR_EVENTS.filter(e=>new Date(e.date)>=new Date()).sort((a,b)=>new Date(a.date)-new Date(b.date));
+      if(!upcoming.length) return;
+      list.innerHTML=upcoming.map(e=>{
+        const d=new Date(e.date),month=d.toLocaleDateString('en-US',{month:'short'}).toUpperCase();
+        return `<div class="tour-date-item"><div class="tour-date-date">${month}<br>${d.getDate()}</div><div class="tour-date-info"><div class="tour-date-venue">${e.venue}</div><div class="tour-date-city">${e.city}</div></div><a href="${e.ticketUrl}" target="_blank" class="tour-date-btn">🎟 TICKETS</a></div>`;
+      }).join('');
+    }
+    renderTourList();
+
+    /* ============ MEMBER MODAL ============ */
+    function openMemberModal(i) {
+      const m=MEMBERS[i]; if(!m) return;
+      document.getElementById('modal-name').textContent=m.name;
+      document.getElementById('modal-role').textContent=currentLang==='es'?m.roleEs:m.role;
+      document.getElementById('modal-bio').textContent=currentLang==='es'?m.bioEs:m.bioEn;
+      document.getElementById('memberModal').classList.add('open');
+    }
+    function closeMemberModal(e) { if(e&&e.target!==document.getElementById('memberModal'))return; document.getElementById('memberModal').classList.remove('open'); }
+
+    /* ============ VIDEO GALLERY ============ */
+    function renderVideos() {
+      const grid=document.getElementById('video-grid'); grid.innerHTML='';
+      VIDEOS.forEach(v=>{
+        const title=currentLang==='es'?v.titleEs:v.titleEn;
+        const card=document.createElement('div'); card.className='video-thumb';
+        card.innerHTML=`<img src="https://img.youtube.com/vi/${v.id}/hqdefault.jpg" alt="${title}"><div class="video-play-icon"><i class="fas fa-play-circle"></i></div><div class="video-title">${title}</div>`;
+        card.addEventListener('click',()=>openVideoModal(v.id));
+        grid.appendChild(card);
+      });
+    }
+    function openVideoModal(id) { document.getElementById('video-modal-iframe').src=`https://www.youtube.com/embed/${id}?autoplay=1`; document.getElementById('videoModal').classList.add('open'); }
+    function closeVideoModal(e) { if(e&&e.target!==document.getElementById('videoModal'))return; document.getElementById('video-modal-iframe').src=''; document.getElementById('videoModal').classList.remove('open'); }
+    renderVideos();
+
+    /* ============ MERCH ============ */
+    function renderMerch() {
+      const grid=document.getElementById('merch-grid'); grid.innerHTML='';
+      MERCH_ITEMS.forEach((item,i)=>{
+        const name=currentLang==='es'?item.nameEs:item.nameEn;
+        const card=document.createElement('div'); card.className='merch-card'; card.onclick=()=>openMerchModal(i);
+        card.innerHTML=`<div class="merch-image">${item.imageUrl?`<img src="${item.imageUrl}" alt="${name}">`:'[ PHOTO ]'}</div><div class="merch-details"><div class="merch-name">${name}</div><div class="merch-price">${item.price}</div><div class="merch-btn">${currentLang==='es'?'Ver / Comprar':'View / Buy'}</div></div>`;
+        grid.appendChild(card);
+      });
+    }
+    function openMerchModal(i) {
+      const item=MERCH_ITEMS[i]; if(!item) return;
+      const name=currentLang==='es'?item.nameEs:item.nameEn;
+      document.getElementById('merch-modal-name').textContent=name;
+      document.getElementById('merch-modal-price').textContent=item.price;
+      document.getElementById('merch-modal-btn').href=item.buyUrl;
+      document.getElementById('merch-modal-btn').textContent=currentLang==='es'?'Comprar':'Buy Now';
+      document.getElementById('merch-modal-img-wrap').innerHTML=item.imageUrl?`<img src="${item.imageUrl}" alt="${name}" style="width:100%">`:`<div style="width:100%;aspect-ratio:1;background:#1a1a1a;display:flex;align-items:center;justify-content:center;color:#444;font-size:.75rem;">[ PHOTO ]</div>`;
+      document.getElementById('merchModal').classList.add('open');
+    }
+    function closeMerchModal(e) { if(e&&e.target!==document.getElementById('merchModal'))return; document.getElementById('merchModal').classList.remove('open'); }
+    renderMerch();
+
+    /* ============ BOOKING ============ */
+    let currentStep=1;
+    function nextStep(step) {
+      document.getElementById('step-'+currentStep).classList.remove('active');
+      currentStep=step;
+      document.getElementById('step-'+currentStep).classList.add('active');
+      for(let i=1;i<=4;i++) document.getElementById('dot-'+i).classList.toggle('done',i<=currentStep);
+    }
+    document.getElementById('booking-form').addEventListener('submit',async function(e){
+      e.preventDefault();
+      try {
+        const res=await fetch(e.target.action,{method:'POST',body:new FormData(e.target),headers:{Accept:'application/json'}});
+        if(res.ok){e.target.style.display='none';document.getElementById('booking-success').classList.add('show');}
+      } catch(err){alert('Something went wrong. Please try again.');}
+    });
+
+    /* ============ CAROUSEL ============ */
+    const track=document.getElementById('carousel-track');
+    track.innerHTML+=track.innerHTML;
+
+    /* ============ COOKIE BANNER ============ */
+    function acceptCookies(){document.getElementById('cookie-banner').style.display='none';localStorage.setItem('cookiesAccepted','1');}
+    if(localStorage.getItem('cookiesAccepted')) document.getElementById('cookie-banner').style.display='none';
+
+    /* ============ INIT ============ */
+    document.getElementById('band-bio-text').innerHTML = BAND_BIO_EN;
+  </script>
 </body>
 </html>
