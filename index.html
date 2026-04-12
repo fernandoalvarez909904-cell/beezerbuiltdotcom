@@ -83,7 +83,6 @@
     .nav-links{display:flex;gap:28px;list-style:none;}
     .nav-links a{font-family:var(--font-sub);font-size:0.7rem;letter-spacing:3px;text-transform:uppercase;color:var(--muted);transition:color 0.3s,text-shadow 0.3s;position:relative;}
     .nav-links a:hover,.nav-links a.spotlight-active{color:#fff;text-shadow:0 0 18px rgba(255,255,255,0.9),0 0 40px rgba(255,200,80,0.5);}
-    /* Spotlight click ripple */
     .nav-links a::after{content:'';position:absolute;top:50%;left:50%;width:0;height:0;background:radial-gradient(circle,rgba(255,220,100,0.6) 0%,transparent 70%);transform:translate(-50%,-50%);border-radius:50%;transition:width 0.5s,height 0.5s,opacity 0.5s;opacity:0;}
     .nav-links a.spotlight-active::after{width:120px;height:60px;opacity:1;}
     .nav-right{display:flex;align-items:center;gap:14px;}
@@ -92,6 +91,21 @@
     .lang-toggle{display:flex;gap:6px;font-size:0.7rem;}
     .lang-toggle button{padding:4px 10px;border:1px solid var(--muted);color:var(--muted);border-radius:2px;transition:all 0.3s;font-family:var(--font-sub);}
     .lang-toggle button.active{border-color:#fff;color:#fff;box-shadow:0 0 10px rgba(255,255,255,0.3);}
+    /* Hamburger */
+    .hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;}
+    .hamburger span{display:block;width:24px;height:2px;background:#fff;transition:all 0.3s;}
+    /* Mobile menu */
+    .mobile-menu{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:32px;}
+    .mobile-menu.open{display:flex;}
+    .mobile-menu a{font-family:var(--font-sub);font-size:1.2rem;letter-spacing:4px;text-transform:uppercase;color:var(--muted);transition:color 0.3s;}
+    .mobile-menu a:hover{color:#fff;}
+    .mobile-menu-close{position:absolute;top:20px;right:24px;font-size:1.8rem;color:var(--muted);cursor:pointer;}
+    .mobile-social{display:flex;gap:20px;margin-top:10px;}
+    .mobile-social a{font-size:1.3rem;color:var(--muted);transition:color 0.3s;}
+    .mobile-social a:hover{color:#fff;}
+    .mobile-lang{display:flex;gap:10px;}
+    .mobile-lang button{padding:6px 14px;border:1px solid var(--muted);color:var(--muted);border-radius:2px;font-family:var(--font-sub);font-size:.8rem;transition:all 0.3s;}
+    .mobile-lang button.active{border-color:#fff;color:#fff;}
 
     /* ===================== SECTION TITLE ===================== */
     .section-title{font-family:var(--font-head);font-size:2.8rem;letter-spacing:4px;color:#fff;text-align:center;margin-bottom:40px;text-shadow:0 0 30px rgba(255,255,255,0.2);}
@@ -102,7 +116,7 @@
     .hero-bg::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,0.5);}
     .hero-video-wrapper{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
     .hero-video-wrapper iframe{position:absolute;top:50%;left:50%;width:100vw;height:56.25vw;min-height:100vh;min-width:177.77vh;transform:translate(-50%,-50%);}
-    .hero-content{position:relative;z-index:2;text-align:center;padding:0 20px;}
+    .hero-content{position:relative;z-index:10;text-align:center;padding:0 20px;}
     .hero-tagline{font-family:var(--font-sub);font-size:0.75rem;letter-spacing:6px;text-transform:uppercase;color:rgba(255,255,255,0.7);margin-bottom:20px;}
     /* Logo placeholder — swap the text below for <img src="IMGUR_URL"> once uploaded */
     .hero-logo-text{font-family:var(--font-head);font-size:clamp(4rem,12vw,9rem);letter-spacing:8px;line-height:1;color:#fff;text-shadow:0 0 60px rgba(255,255,255,0.3),0 4px 30px rgba(0,0,0,0.8);}
@@ -152,6 +166,7 @@
     .insta-scroll-track:hover{animation-play-state:paused;}
     .insta-post{width:200px;height:200px;background:#1a1a1a;border:1px solid #222;border-radius:8px;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#2a2a2a;font-size:.7rem;letter-spacing:2px;font-family:var(--font-sub);}
     .insta-post img{width:100%;height:100%;object-fit:cover;}
+    .insta-post blockquote,.insta-post iframe{max-width:200px!important;min-width:unset!important;width:200px!important;}
     @keyframes scroll-insta{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
 
     /* ===================== DONATE ===================== */
@@ -298,10 +313,25 @@
     .cookie-accept:hover{opacity:.85;}
 
     @media(max-width:768px){
-      nav{padding:14px 20px;}
+      nav{padding:12px 16px;}
       .nav-links{display:none;}
+      .nav-social{display:none;}
+      .lang-toggle{display:none;}
+      .hamburger{display:flex;}
+      .hero-content{padding:0 16px;}
+      .hero-logo-img{width:85vw;max-width:340px;}
+      .hero-logo-text{font-size:clamp(3rem,18vw,6rem);}
+      .hero-tagline{font-size:0.6rem;letter-spacing:3px;}
+      .mute-btn{bottom:16px;right:16px;padding:8px 12px;font-size:.6rem;}
+      .countdown-blocks{gap:12px;}
+      .countdown-number{font-size:2.5rem;}
+      .countdown-block{min-width:60px;}
+      .section-title{font-size:2rem;letter-spacing:3px;}
       .merch-modal-box{flex-direction:column;}
       .merch-modal-img{width:100%;}
+      .week-grid{gap:4px;}
+      .week-day{padding:8px 4px;min-height:70px;}
+      .day-number{font-size:1.2rem;}
     }
   </style>
 </head>
@@ -310,6 +340,29 @@
   <!-- Stage lighting overlays -->
   <div class="stage-top"></div>
   <div class="stage-bottom"></div>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-menu" id="mobile-menu">
+    <span class="mobile-menu-close" onclick="closeMobileMenu()">✕</span>
+    <a href="#" onclick="closeMobileMenu();return navClick(this,'home')"    data-lang-en="Home"    data-lang-es="Inicio">Home</a>
+    <a href="#" onclick="closeMobileMenu();return navClick(this,'about')"   data-lang-en="About"   data-lang-es="Nosotros">About</a>
+    <a href="#" onclick="closeMobileMenu();return navClick(this,'tours')"   data-lang-en="Tours"   data-lang-es="Giras">Tours</a>
+    <a href="#" onclick="closeMobileMenu();return navClick(this,'merch')"   data-lang-en="Merch"   data-lang-es="Merch">Merch</a>
+    <a href="#" onclick="closeMobileMenu();return navClick(this,'videos')"  data-lang-en="Videos"  data-lang-es="Videos">Videos</a>
+    <a href="#" onclick="closeMobileMenu();return navClick(this,'booking')" data-lang-en="Booking" data-lang-es="Reservas">Booking</a>
+    <div class="mobile-lang">
+      <button onclick="setLang('en')" id="mob-btn-en" class="active">EN</button>
+      <button onclick="setLang('es')" id="mob-btn-es">ES</button>
+    </div>
+    <div class="mobile-social">
+      <a href="https://www.instagram.com/soulfaithmx"    target="_blank"><i class="fab fa-instagram"></i></a>
+      <a href="https://www.facebook.com/soulfaithmx"     target="_blank"><i class="fab fa-facebook"></i></a>
+      <a href="https://youtube.com/@jou8aaxel"           target="_blank"><i class="fab fa-youtube"></i></a>
+      <a href="https://www.tiktok.com/@soulfaithoficial" target="_blank"><i class="fab fa-tiktok"></i></a>
+      <a href="https://twitter.com/soulfaithmx"          target="_blank"><i class="fab fa-x-twitter"></i></a>
+      <a href="https://wa.me/526871264099"               target="_blank"><i class="fab fa-whatsapp"></i></a>
+    </div>
+  </div>
 
   <!-- NAVBAR -->
   <nav>
@@ -334,6 +387,9 @@
         <a href="https://www.tiktok.com/@soulfaithoficial" target="_blank"><i class="fab fa-tiktok"></i></a>
         <a href="https://twitter.com/soulfaithmx"          target="_blank"><i class="fab fa-x-twitter"></i></a>
         <a href="https://wa.me/526871264099"               target="_blank"><i class="fab fa-whatsapp"></i></a>
+      </div>
+      <div class="hamburger" onclick="document.getElementById('mobile-menu').classList.add('open')">
+        <span></span><span></span><span></span>
       </div>
     </div>
   </nav>
@@ -742,12 +798,18 @@
       { nameEn:"Hat",          nameEs:"Gorra",     price:"$20.00", imageUrl:"https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400&q=80", buyUrl:"#" },
     ];
 
+    function closeMobileMenu(){ document.getElementById('mobile-menu').classList.remove('open'); }
+
     /* ======== LANGUAGE ======== */
     let currentLang = 'en';
     function setLang(lang) {
       currentLang = lang;
       document.getElementById('btn-en').classList.toggle('active', lang==='en');
       document.getElementById('btn-es').classList.toggle('active', lang==='es');
+      if(document.getElementById('mob-btn-en')){
+        document.getElementById('mob-btn-en').classList.toggle('active', lang==='en');
+        document.getElementById('mob-btn-es').classList.toggle('active', lang==='es');
+      }
       document.querySelectorAll('[data-lang-en]').forEach(el => { el.innerHTML = lang==='en' ? el.dataset.langEn : el.dataset.langEs; });
       document.getElementById('countdown-event-name').textContent = lang==='en' ? NEXT_SHOW_NAME : NEXT_SHOW_NAMEES;
       document.getElementById('band-bio-text').innerHTML = lang==='en' ? BAND_BIO_EN : BAND_BIO_ES;
