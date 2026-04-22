@@ -60,42 +60,169 @@
       display:flex; flex-direction:column; align-items:center; gap:16px;
     }
 
-    /* Bee in loader */
-    .loader-bee-wrap {
-      position:relative; width:100vw; height:90px;
-      overflow:hidden;
-    }
-    .loader-bee {
-      position:absolute; top:0; left:-80px;
-      width:70px; height:70px;
-      animation: beeTag 2.2s cubic-bezier(.4,0,.2,1) forwards;
-      animation-delay: .4s;
-    }
-    @keyframes beeTag {
-      0%   { left:-80px; transform:rotate(-10deg); }
-      50%  { transform:rotate(5deg); }
-      100% { left:calc(100% + 80px); transform:rotate(-10deg); }
+    /* Scene: title + bee walk area share the same space */
+    .loader-scene {
+      position: relative;
+      width: 100vw;
+      height: 190px;
+      overflow: hidden;
     }
 
-    /* Tagline reveal behind bee */
+    /* Title sits in upper portion of scene */
     .loader-tagline-wrap {
-      position:relative;
-      text-align:center; padding:0 20px;
+      position: absolute;
+      top: 28px;
+      left: 0; right: 0;
+      text-align: center;
+      padding: 0 20px;
+      z-index: 2;
     }
     .loader-tagline {
       font-family:'Bebas Neue', sans-serif;
-      font-size:clamp(2rem, 6vw, 5rem);
-      color:var(--gold);
+      font-size: clamp(2rem, 6vw, 5rem);
+      color: var(--gold);
       clip-path: inset(0 100% 0 0);
-      animation: revealText 2.2s cubic-bezier(.4,0,.2,1) forwards;
+      /* Spray reveal starts when bee arrives: 42% of 4.2s + 0.4s delay = ~2.16s from page load */
+      animation: revealSpray 1.4s cubic-bezier(.2,0,.3,1) forwards;
+      animation-delay: 2.15s;
+      white-space: nowrap;
+      letter-spacing: .05em;
+    }
+    @keyframes revealSpray {
+      0%   { clip-path: inset(0 100% 0 0); filter: blur(4px); }
+      60%  { filter: blur(1px); }
+      100% { clip-path: inset(0 0% 0 0); filter: blur(0); }
+    }
+
+    /* Spray mist overlay — fades in/out during spray phase */
+    .loader-spray-mist {
+      position: absolute;
+      top: 20px; left: 0; right: 0;
+      height: 80px;
+      opacity: 0;
+      background: radial-gradient(ellipse 60% 80% at 50% 50%,
+        rgba(201,162,39,0.18) 0%, transparent 70%);
+      animation: mistAnim 4.2s linear forwards;
       animation-delay: .4s;
-      white-space:nowrap;
-      letter-spacing:.05em;
+      z-index: 1;
+      pointer-events: none;
     }
-    @keyframes revealText {
-      0%   { clip-path: inset(0 100% 0 0); }
-      100% { clip-path: inset(0 0% 0 0); }
+    @keyframes mistAnim {
+      0%   { opacity:0; }
+      40%  { opacity:0; }
+      44%  { opacity:1; }
+      74%  { opacity:1; }
+      77%  { opacity:0; }
+      100% { opacity:0; }
     }
+
+    /* Bee + spray-can group: moves horizontally */
+    .loader-bee-group {
+      position: absolute;
+      bottom: 6px;
+      left: -100px;
+      display: flex;
+      align-items: flex-end;
+      z-index: 3;
+      animation: beeWalk 4.2s cubic-bezier(.35,.1,.3,1) forwards;
+      animation-delay: .4s;
+    }
+    @keyframes beeWalk {
+      0%   { left: -100px; }
+      42%  { left: calc(50% - 110px); }  /* arrive in front of title */
+      76%  { left: calc(50% - 110px); }  /* stay through spray */
+      100% { left: calc(100% + 100px); } /* stroll off right */
+    }
+
+    /* Bee SVG: bobs while walking, leans during spray */
+    .loader-bee {
+      width: 72px; height: 72px;
+      display: block;
+      animation: beeBobAll 4.2s linear forwards;
+      animation-delay: .4s;
+    }
+    @keyframes beeBobAll {
+      /* Walk-in bob (0–42%) */
+      0%    { transform: translateY(0)    rotate(0deg);  }
+      2.4%  { transform: translateY(-7px) rotate(3deg);  }
+      4.8%  { transform: translateY(0)    rotate(0deg);  }
+      7.2%  { transform: translateY(-7px) rotate(3deg);  }
+      9.6%  { transform: translateY(0)    rotate(0deg);  }
+      12%   { transform: translateY(-7px) rotate(3deg);  }
+      14.4% { transform: translateY(0)    rotate(0deg);  }
+      16.8% { transform: translateY(-7px) rotate(3deg);  }
+      19.2% { transform: translateY(0)    rotate(0deg);  }
+      21.6% { transform: translateY(-7px) rotate(3deg);  }
+      24%   { transform: translateY(0)    rotate(0deg);  }
+      26.4% { transform: translateY(-7px) rotate(3deg);  }
+      28.8% { transform: translateY(0)    rotate(0deg);  }
+      31.2% { transform: translateY(-7px) rotate(3deg);  }
+      33.6% { transform: translateY(0)    rotate(0deg);  }
+      36%   { transform: translateY(-7px) rotate(3deg);  }
+      38.4% { transform: translateY(0)    rotate(0deg);  }
+      40.8% { transform: translateY(-7px) rotate(3deg);  }
+      42%   { transform: translateY(0)    rotate(0deg);  } /* land */
+      /* Spray phase (42–76%): lean forward with arm pumps */
+      46%   { transform: translateY(0)    rotate(-9deg); }
+      54%   { transform: translateY(0)    rotate(-7deg); }
+      62%   { transform: translateY(0)    rotate(-10deg);}
+      70%   { transform: translateY(0)    rotate(-7deg); }
+      76%   { transform: translateY(0)    rotate(0deg);  } /* straighten */
+      /* Walk-out bob (76–100%) */
+      78.4% { transform: translateY(-7px) rotate(3deg);  }
+      80.8% { transform: translateY(0)    rotate(0deg);  }
+      83.2% { transform: translateY(-7px) rotate(3deg);  }
+      85.6% { transform: translateY(0)    rotate(0deg);  }
+      88%   { transform: translateY(-7px) rotate(3deg);  }
+      90.4% { transform: translateY(0)    rotate(0deg);  }
+      92.8% { transform: translateY(-7px) rotate(3deg);  }
+      95.2% { transform: translateY(0)    rotate(0deg);  }
+      97.6% { transform: translateY(-7px) rotate(3deg);  }
+      100%  { transform: translateY(0)    rotate(0deg);  }
+    }
+
+    /* Spray can: appears when bee stops, disappears when bee walks away */
+    .loader-spray-can {
+      position: absolute;
+      right: -20px;
+      bottom: 28px;
+      width: 16px; height: 34px;
+      opacity: 0;
+      transform-origin: bottom center;
+      animation: sprayCanAnim 4.2s linear forwards;
+      animation-delay: .4s;
+    }
+    @keyframes sprayCanAnim {
+      0%   { opacity:0; transform: rotate(0deg) scale(1); }
+      41%  { opacity:0; transform: rotate(0deg) scale(1); }
+      43%  { opacity:1; transform: rotate(-35deg) scale(1); } /* whip out */
+      50%  { opacity:1; transform: rotate(-38deg) scale(1); }
+      58%  { opacity:1; transform: rotate(-32deg) scale(1) translateX(2px); }
+      66%  { opacity:1; transform: rotate(-38deg) scale(1); }
+      74%  { opacity:1; transform: rotate(-34deg) scale(1); }
+      76%  { opacity:0; transform: rotate(0deg) scale(0.7); } /* tuck away */
+      100% { opacity:0; }
+    }
+
+    /* Spray particles: tiny dots that burst from the can */
+    .loader-spray-dots {
+      position: absolute;
+      right: -50px;
+      bottom: 45px;
+      width: 36px; height: 28px;
+      opacity: 0;
+      animation: sprayDotsAnim 4.2s linear forwards;
+      animation-delay: .4s;
+    }
+    @keyframes sprayDotsAnim {
+      0%   { opacity:0; }
+      43%  { opacity:0; }
+      46%  { opacity:0.9; }
+      73%  { opacity:0.9; }
+      76%  { opacity:0; }
+      100% { opacity:0; }
+    }
+
     .loader-sub {
       font-size:clamp(.9rem, 2vw, 1.2rem);
       color:var(--gray-light);
@@ -103,13 +230,13 @@
       text-transform:uppercase;
       opacity:0;
       animation: fadeUp .8s ease forwards;
-      animation-delay: 2.8s;
+      animation-delay: 3.8s;
     }
     .loader-dots {
       display:flex; gap:8px; margin-top:32px;
       opacity:0;
       animation: fadeUp .5s ease forwards;
-      animation-delay: 3s;
+      animation-delay: 4s;
     }
     .loader-dot {
       width:8px; height:8px; border-radius:50%;
@@ -818,32 +945,135 @@
     .footer-bottom a:hover { color:var(--gold); }
 
     /* =========================================================
-       FLOATING BEE MASCOT (site-wide)
+       FLOATING BEE WIDGET (site-wide)
     ========================================================= */
-    #floating-bee {
-      position:fixed; bottom:32px; right:32px; z-index:800;
-      width:60px; height:60px;
-      cursor:pointer;
-      filter:drop-shadow(0 4px 16px rgba(201,162,39,.4));
-      animation:floatBee 3.5s ease-in-out infinite;
-      transition:transform .2s;
-    }
-    #floating-bee:hover { transform:scale(1.15) rotate(-10deg); }
-    @keyframes floatBee {
-      0%,100%{ transform:translateY(0); }
-      50%    { transform:translateY(-10px); }
+    #bee-widget {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 800;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 10px;
     }
 
-    /* Tooltip on bee */
-    #floating-bee::after {
-      content:'Need help?';
-      position:absolute; right:70px; top:50%; transform:translateY(-50%);
-      background:var(--gold); color:var(--navy);
-      font-family:'Outfit', sans-serif; font-size:.75rem; font-weight:700;
-      padding:6px 12px; border-radius:4px; white-space:nowrap;
-      opacity:0; pointer-events:none; transition:opacity .2s;
+    /* Speech bubble above the bee */
+    #bee-speech {
+      display: none;
+      position: relative;
+      background: var(--navy-card);
+      border: 1.5px solid var(--gold);
+      border-radius: 14px 14px 4px 14px;
+      padding: 16px 18px 14px;
+      max-width: 300px;
+      min-width: 220px;
+      box-shadow: 0 8px 36px rgba(0,0,0,.55), 0 0 0 1px rgba(201,162,39,.1);
+      animation: fadeUp .25s ease;
+      text-align: left;
     }
-    #floating-bee:hover::after { opacity:1; }
+    #bee-speech.visible { display: block; }
+    #bee-speech-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.1rem;
+      letter-spacing: .04em;
+      color: var(--gold);
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+    #bee-speech-text {
+      font-size: .82rem;
+      color: var(--gray-light);
+      line-height: 1.65;
+      max-height: 240px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--gold) transparent;
+    }
+    #bee-speech-close {
+      position: absolute;
+      top: 8px; right: 10px;
+      font-size: .9rem;
+      color: var(--gray);
+      background: none; border: none;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px 4px;
+      transition: color .2s;
+    }
+    #bee-speech-close:hover { color: var(--gold); }
+    /* Triangle pointer at bottom-right of bubble */
+    #bee-speech::after {
+      content: '';
+      position: absolute;
+      bottom: -10px; right: 22px;
+      border: 8px solid transparent;
+      border-top: 10px solid var(--gold);
+    }
+    #bee-speech::before {
+      content: '';
+      position: absolute;
+      bottom: -8px; right: 23px;
+      border: 7px solid transparent;
+      border-top: 9px solid var(--navy-card);
+      z-index: 1;
+    }
+
+    #floating-bee {
+      width: 64px; height: 64px;
+      cursor: pointer;
+      filter: drop-shadow(0 4px 16px rgba(201,162,39,.4));
+      animation: floatBee 3.5s ease-in-out infinite;
+      transition: transform .2s;
+      display: block;
+    }
+    #floating-bee:hover { transform: scale(1.15) rotate(-10deg); }
+    @keyframes floatBee {
+      0%,100%{ transform: translateY(0); }
+      50%    { transform: translateY(-10px); }
+    }
+
+    /* =========================================================
+       RESTAURANT FEATURE CARDS
+    ========================================================= */
+    .rf-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .rf-card {
+      background: var(--navy-card);
+      border: 1px solid var(--navy-border);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+    }
+    .rf-card:hover,
+    .rf-card.active {
+      transform: translateY(-4px);
+      border-color: rgba(201,162,39,.55);
+      box-shadow: 0 10px 36px rgba(201,162,39,.12);
+    }
+    .rf-card.active {
+      border-color: var(--gold);
+    }
+    .rf-card-img {
+      width: 100%;
+      height: 130px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .rf-card-title {
+      padding: 12px 14px;
+      font-weight: 700;
+      font-size: .9rem;
+      color: var(--white);
+      line-height: 1.3;
+      text-align: center;
+    }
 
     /* =========================================================
        PRIVACY & TERMS MODAL
@@ -1256,75 +1486,111 @@
 ============================================================ -->
 <div id="loader">
   <div class="loader-stage">
-    <!-- Bee moving across -->
-    <div class="loader-bee-wrap">
-      <svg class="loader-bee" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <radialGradient id="bodyGrad" cx="40%" cy="35%" r="60%">
-            <stop offset="0%" stop-color="#E8C547"/>
-            <stop offset="100%" stop-color="#9A7A10"/>
-          </radialGradient>
-          <radialGradient id="headGrad" cx="40%" cy="35%" r="60%">
-            <stop offset="0%" stop-color="#E8C547"/>
-            <stop offset="100%" stop-color="#C9A227"/>
-          </radialGradient>
-          <filter id="wingBlur">
-            <feGaussianBlur stdDeviation="0.4"/>
-          </filter>
-          <linearGradient id="wingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="rgba(255,255,255,0.92)"/>
-            <stop offset="100%" stop-color="rgba(200,220,255,0.55)"/>
-          </linearGradient>
-        </defs>
-        <!-- Upper wings -->
-        <ellipse cx="19" cy="26" rx="17" ry="8.5" fill="url(#wingGrad)" transform="rotate(-28 19 26)" filter="url(#wingBlur)"/>
-        <ellipse cx="61" cy="26" rx="17" ry="8.5" fill="url(#wingGrad)" transform="rotate(28 61 26)" filter="url(#wingBlur)"/>
-        <!-- Wing veins -->
-        <line x1="19" y1="26" x2="6" y2="19" stroke="rgba(100,160,255,0.35)" stroke-width="0.7"/>
-        <line x1="19" y1="26" x2="10" y2="22" stroke="rgba(100,160,255,0.25)" stroke-width="0.5"/>
-        <line x1="61" y1="26" x2="74" y2="19" stroke="rgba(100,160,255,0.35)" stroke-width="0.7"/>
-        <line x1="61" y1="26" x2="70" y2="22" stroke="rgba(100,160,255,0.25)" stroke-width="0.5"/>
-        <!-- Lower wings (smaller) -->
-        <ellipse cx="23" cy="36" rx="10" ry="5" fill="rgba(255,255,255,0.55)" transform="rotate(-15 23 36)"/>
-        <ellipse cx="57" cy="36" rx="10" ry="5" fill="rgba(255,255,255,0.55)" transform="rotate(15 57 36)"/>
-        <!-- Body (abdomen) -->
-        <ellipse cx="40" cy="54" rx="13" ry="16" fill="url(#bodyGrad)"/>
-        <!-- Body stripes -->
-        <rect x="27.5" y="47" width="25" height="4.5" rx="1.5" fill="#0D1B2E" opacity="0.72"/>
-        <rect x="27.5" y="54" width="25" height="4.5" rx="1.5" fill="#0D1B2E" opacity="0.72"/>
-        <rect x="29" y="61" width="22" height="3" rx="1.5" fill="#0D1B2E" opacity="0.5"/>
-        <!-- Body sheen -->
-        <ellipse cx="35" cy="47" rx="5" ry="2.5" fill="rgba(255,255,255,0.18)" transform="rotate(-10 35 47)"/>
-        <!-- Head (teardrop / rounded) -->
-        <ellipse cx="40" cy="26" rx="13" ry="14" fill="url(#headGrad)"/>
-        <!-- Head sheen -->
-        <ellipse cx="36" cy="20" rx="5" ry="3" fill="rgba(255,255,255,0.22)" transform="rotate(-15 36 20)"/>
-        <!-- Eyes -->
-        <ellipse cx="34" cy="24" rx="3.5" ry="3.5" fill="#0D1B2E"/>
-        <ellipse cx="46" cy="24" rx="3.5" ry="3.5" fill="#0D1B2E"/>
-        <circle cx="35.2" cy="22.8" r="1.1" fill="white"/>
-        <circle cx="47.2" cy="22.8" r="1.1" fill="white"/>
-        <!-- Mouth / smile -->
-        <path d="M36 31 Q40 34 44 31" stroke="#0D1B2E" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.8"/>
-        <!-- Code bracket on body -->
-        <text x="29.5" y="56" font-size="9.5" fill="#0D1B2E" font-family="monospace" font-weight="bold" opacity="0.9">&lt;/&gt;</text>
-        <!-- Stinger -->
-        <polygon points="40,70 37,76 43,76" fill="#7A5F0A"/>
-        <polygon points="40,72 38.5,75.5 41.5,75.5" fill="#9A7A10"/>
-        <!-- Antennae -->
-        <path d="M36 13 Q32 8 27 6" stroke="#5A4010" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-        <path d="M44 13 Q48 8 53 6" stroke="#5A4010" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-        <!-- Antenna tips -->
-        <circle cx="27" cy="6" r="3" fill="#C9A227" stroke="#5A4010" stroke-width="0.8"/>
-        <circle cx="53" cy="6" r="3" fill="#C9A227" stroke="#5A4010" stroke-width="0.8"/>
-        <!-- Antenna tip shine -->
-        <circle cx="26.2" cy="5.2" r="0.9" fill="rgba(255,255,255,0.7)"/>
-        <circle cx="52.2" cy="5.2" r="0.9" fill="rgba(255,255,255,0.7)"/>
-      </svg>
-    </div>
-    <!-- Tagline reveal -->
-    <div class="loader-tagline-wrap">
-      <div class="loader-tagline">BEEZERBUILT</div>
+    <!-- Scene: bee walks in, sprays title, walks off -->
+    <div class="loader-scene">
+      <!-- Spray mist glow behind title -->
+      <div class="loader-spray-mist"></div>
+      <!-- Title: revealed by spray -->
+      <div class="loader-tagline-wrap">
+        <div class="loader-tagline">BEEZERBUILT</div>
+      </div>
+      <!-- Bee + spray can group -->
+      <div class="loader-bee-group">
+        <!-- Spray can (appears when bee stops) -->
+        <svg class="loader-spray-can" viewBox="0 0 16 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="canBody" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#777"/>
+              <stop offset="45%" stop-color="#bbb"/>
+              <stop offset="100%" stop-color="#555"/>
+            </linearGradient>
+          </defs>
+          <!-- Can body -->
+          <rect x="2" y="13" width="12" height="20" rx="3.5" fill="url(#canBody)"/>
+          <!-- Neck -->
+          <rect x="4" y="8" width="8" height="7" rx="2" fill="#555"/>
+          <!-- Nozzle -->
+          <rect x="6" y="4" width="4" height="5" rx="1.5" fill="#999"/>
+          <!-- Nozzle button -->
+          <circle cx="8" cy="4" r="1.5" fill="#C9A227"/>
+          <!-- Gold label -->
+          <rect x="3" y="18" width="10" height="9" rx="1" fill="#C9A227" opacity="0.92"/>
+          <text x="4.5" y="25.5" font-size="3.8" fill="#080E1A" font-family="sans-serif" font-weight="900">BZB</text>
+          <!-- Shine strip -->
+          <rect x="3" y="14" width="2.5" height="14" rx="1.2" fill="rgba(255,255,255,0.18)"/>
+        </svg>
+        <!-- Spray dots (golden mist) -->
+        <svg class="loader-spray-dots" viewBox="0 0 36 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="8"  cy="14" r="3.5" fill="#C9A227" opacity="0.7"/>
+          <circle cx="16" cy="9"  r="2.5" fill="#E8C547" opacity="0.6"/>
+          <circle cx="22" cy="16" r="2"   fill="#C9A227" opacity="0.5"/>
+          <circle cx="28" cy="7"  r="3"   fill="#E8C547" opacity="0.55"/>
+          <circle cx="32" cy="20" r="1.5" fill="#C9A227" opacity="0.4"/>
+          <circle cx="12" cy="22" r="1.8" fill="#E8C547" opacity="0.45"/>
+          <circle cx="20" cy="3"  r="2.2" fill="#C9A227" opacity="0.5"/>
+        </svg>
+        <!-- The bee -->
+        <svg class="loader-bee" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="bodyGrad" cx="40%" cy="35%" r="60%">
+              <stop offset="0%" stop-color="#E8C547"/>
+              <stop offset="100%" stop-color="#9A7A10"/>
+            </radialGradient>
+            <radialGradient id="headGrad" cx="40%" cy="35%" r="60%">
+              <stop offset="0%" stop-color="#E8C547"/>
+              <stop offset="100%" stop-color="#C9A227"/>
+            </radialGradient>
+            <filter id="wingBlur">
+              <feGaussianBlur stdDeviation="0.4"/>
+            </filter>
+            <linearGradient id="wingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="rgba(255,255,255,0.92)"/>
+              <stop offset="100%" stop-color="rgba(200,220,255,0.55)"/>
+            </linearGradient>
+          </defs>
+          <!-- Upper wings -->
+          <ellipse cx="19" cy="26" rx="17" ry="8.5" fill="url(#wingGrad)" transform="rotate(-28 19 26)" filter="url(#wingBlur)"/>
+          <ellipse cx="61" cy="26" rx="17" ry="8.5" fill="url(#wingGrad)" transform="rotate(28 61 26)" filter="url(#wingBlur)"/>
+          <!-- Wing veins -->
+          <line x1="19" y1="26" x2="6" y2="19" stroke="rgba(100,160,255,0.35)" stroke-width="0.7"/>
+          <line x1="19" y1="26" x2="10" y2="22" stroke="rgba(100,160,255,0.25)" stroke-width="0.5"/>
+          <line x1="61" y1="26" x2="74" y2="19" stroke="rgba(100,160,255,0.35)" stroke-width="0.7"/>
+          <line x1="61" y1="26" x2="70" y2="22" stroke="rgba(100,160,255,0.25)" stroke-width="0.5"/>
+          <!-- Lower wings -->
+          <ellipse cx="23" cy="36" rx="10" ry="5" fill="rgba(255,255,255,0.55)" transform="rotate(-15 23 36)"/>
+          <ellipse cx="57" cy="36" rx="10" ry="5" fill="rgba(255,255,255,0.55)" transform="rotate(15 57 36)"/>
+          <!-- Body -->
+          <ellipse cx="40" cy="54" rx="13" ry="16" fill="url(#bodyGrad)"/>
+          <!-- Stripes -->
+          <rect x="27.5" y="47" width="25" height="4.5" rx="1.5" fill="#0D1B2E" opacity="0.72"/>
+          <rect x="27.5" y="54" width="25" height="4.5" rx="1.5" fill="#0D1B2E" opacity="0.72"/>
+          <rect x="29" y="61" width="22" height="3" rx="1.5" fill="#0D1B2E" opacity="0.5"/>
+          <!-- Body sheen -->
+          <ellipse cx="35" cy="47" rx="5" ry="2.5" fill="rgba(255,255,255,0.18)" transform="rotate(-10 35 47)"/>
+          <!-- Head -->
+          <ellipse cx="40" cy="26" rx="13" ry="14" fill="url(#headGrad)"/>
+          <ellipse cx="36" cy="20" rx="5" ry="3" fill="rgba(255,255,255,0.22)" transform="rotate(-15 36 20)"/>
+          <!-- Eyes -->
+          <ellipse cx="34" cy="24" rx="3.5" ry="3.5" fill="#0D1B2E"/>
+          <ellipse cx="46" cy="24" rx="3.5" ry="3.5" fill="#0D1B2E"/>
+          <circle cx="35.2" cy="22.8" r="1.1" fill="white"/>
+          <circle cx="47.2" cy="22.8" r="1.1" fill="white"/>
+          <!-- Smile -->
+          <path d="M36 31 Q40 34 44 31" stroke="#0D1B2E" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.8"/>
+          <!-- Code bracket -->
+          <text x="29.5" y="56" font-size="9.5" fill="#0D1B2E" font-family="monospace" font-weight="bold" opacity="0.9">&lt;/&gt;</text>
+          <!-- Stinger -->
+          <polygon points="40,70 37,76 43,76" fill="#7A5F0A"/>
+          <polygon points="40,72 38.5,75.5 41.5,75.5" fill="#9A7A10"/>
+          <!-- Antennae -->
+          <path d="M36 13 Q32 8 27 6" stroke="#5A4010" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          <path d="M44 13 Q48 8 53 6" stroke="#5A4010" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          <circle cx="27" cy="6" r="3" fill="#C9A227" stroke="#5A4010" stroke-width="0.8"/>
+          <circle cx="53" cy="6" r="3" fill="#C9A227" stroke="#5A4010" stroke-width="0.8"/>
+          <circle cx="26.2" cy="5.2" r="0.9" fill="rgba(255,255,255,0.7)"/>
+          <circle cx="52.2" cy="5.2" r="0.9" fill="rgba(255,255,255,0.7)"/>
+        </svg>
+      </div>
     </div>
     <p class="loader-sub">Web Development & Design</p>
     <div class="loader-dots">
@@ -1634,43 +1900,624 @@
 </div><!-- /tab-capabilities -->
 
 <!-- ============================================================
-     TAB: DEMO BUILDER
+     TAB: DEMO BUILDER — Card Grid
 ============================================================ -->
 <div class="tab-panel" id="tab-demo">
 <section id="sandbox">
-  <div class="section-label" data-i18n="demo_label">Try It Yourself</div>
-  <h2 class="section-title" data-i18n="demo_title">Live <span class="gold">Demo Builder</span></h2>
-  <p class="section-desc" data-i18n="demo_desc">Customize a full website preview — colors, fonts, layouts, features. No coding needed. Click launch to try it.</p>
+  <div class="section-label" data-i18n="demo_label">What We Can Build</div>
+  <h2 class="section-title" data-i18n="demo_title">Our <span class="gold">Portfolio</span></h2>
+  <p class="section-desc" data-i18n="demo_desc">Every type of site we can build for you — tap the 🐝 on any card to hear what makes it special.</p>
 
-  <div id="sandboxLauncher" style="text-align:center;padding:60px 20px;">
-    <div style="font-size:4rem;margin-bottom:24px;">🧪</div>
-    <h3 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.05em;color:var(--white);margin-bottom:12px;">Interactive Website Builder</h3>
-    <p style="color:var(--gray);max-width:480px;margin:0 auto 32px;line-height:1.7;">
-      Pick your theme, colors, fonts, layout, and toggle features on/off. See your site come to life in real time — desktop and mobile preview included.
-    </p>
-    <div style="display:inline-flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;">
-      <span style="padding:6px 14px;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:20px;font-size:.8rem;color:var(--gold);">🎨 Themes &amp; Colors</span>
-      <span style="padding:6px 14px;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:20px;font-size:.8rem;color:var(--gold);">📐 Layouts</span>
-      <span style="padding:6px 14px;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:20px;font-size:.8rem;color:var(--gold);">✨ Live Feature Toggles</span>
-      <span style="padding:6px 14px;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:20px;font-size:.8rem;color:var(--gold);">📱 Mobile Preview</span>
-    </div>
-    <br/>
-    <button class="btn-primary" onclick="loadSandbox()" style="font-size:1rem;padding:16px 40px;">
-      🚀 Launch Visual Builder
+  <div style="margin-bottom:48px;">
+    <button class="btn-primary" onclick="openSandboxModal()" style="display:inline-flex;align-items:center;gap:10px;font-size:1rem;padding:15px 36px;">
+      🧪 Sandbox
     </button>
-    <p style="color:var(--gray);font-size:.8rem;margin-top:14px;" data-i18n="demo_sub">Loads in seconds · No account needed</p>
+    <p style="margin-top:12px;font-size:.85rem;color:var(--gray);">Launch the interactive visual builder — pick themes, colors, layouts &amp; more in real time.</p>
   </div>
 
-  <div id="sandboxIframeContainer" style="display:none;width:100%;border-radius:8px;overflow:hidden;border:1px solid var(--navy-border);">
-    <iframe id="sandboxIframe" src="" width="100%" height="780" style="display:block;border:none;" title="BeezerBuilt Demo Builder"></iframe>
-  </div>
+  <!-- ── CARD GRID ─────────────────────────────────────────── -->
+  <div class="demo-card-grid">
 
-  <div style="text-align:center;margin-top:40px;">
-    <p style="color:var(--gray);margin-bottom:16px;">Like what you see? Let's build the real version for your business.</p>
+    <!-- 1. Restaurant -->
+    <div class="demo-card reveal">
+      <div class="demo-card-visual" style="background:linear-gradient(135deg,#1a0a00 0%,#3d1800 100%);">
+        <svg viewBox="0 0 200 120" width="200" height="120" style="display:block;margin:auto;">
+          <rect x="30" y="20" width="140" height="80" rx="6" fill="#2a1200" stroke="#C9A227" stroke-width="1.5"/>
+          <text x="100" y="42" text-anchor="middle" font-size="11" fill="#C9A227" font-family="'Bebas Neue',sans-serif" letter-spacing="2">MENU</text>
+          <line x1="50" y1="48" x2="150" y2="48" stroke="#C9A227" stroke-width=".5" opacity=".4"/>
+          <text x="55" y="63" font-size="8" fill="#E8C547">🍔 Classic Burger</text><text x="145" y="63" font-size="7" fill="#aaa" text-anchor="end">$12.99</text>
+          <text x="55" y="76" font-size="8" fill="#E8C547">🍕 Pepperoni Pizza</text><text x="145" y="76" font-size="7" fill="#aaa" text-anchor="end">$16.99</text>
+          <text x="55" y="89" font-size="8" fill="#E8C547">🥗 Caesar Salad</text><text x="145" y="89" font-size="7" fill="#aaa" text-anchor="end">$9.99</text>
+        </svg>
+      </div>
+      <div class="demo-card-body">
+        <div class="demo-card-title">🍽️ Restaurant Website</div>
+        <button class="demo-card-bee" onclick="openBeePopup(0)" title="Ask the bee!">
+          <svg viewBox="0 0 40 40" fill="none" width="40" height="40">
+            <ellipse cx="20" cy="27" rx="7" ry="8" fill="#E8C547"/>
+            <rect x="13.5" y="23" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/>
+            <rect x="13.5" y="27" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/>
+            <ellipse cx="20" cy="13" rx="7" ry="7.5" fill="#E8C547"/>
+            <ellipse cx="17" cy="12" rx="2" ry="2" fill="#0D1B2E"/>
+            <ellipse cx="23" cy="12" rx="2" ry="2" fill="#0D1B2E"/>
+            <circle cx="17.5" cy="11.2" r=".6" fill="white"/>
+            <circle cx="23.5" cy="11.2" r=".6" fill="white"/>
+            <ellipse cx="10" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(-25 10 11)"/>
+            <ellipse cx="30" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(25 30 11)"/>
+            <text x="14" y="28.5" font-size="5" fill="#0D1B2E" font-family="monospace" font-weight="bold">&lt;/&gt;</text>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. Online Store -->
+    <div class="demo-card reveal">
+      <div class="demo-card-visual" style="background:linear-gradient(135deg,#000a1a 0%,#001a3d 100%);">
+        <svg viewBox="0 0 200 120" width="200" height="120" style="display:block;margin:auto;">
+          <rect x="60" y="18" width="80" height="22" rx="4" fill="#111f35" stroke="#C9A227" stroke-width="1"/>
+          <text x="100" y="33" text-anchor="middle" font-size="9" fill="#C9A227" font-family="monospace">🛒 CART (3)</text>
+          <rect x="30" y="50" width="38" height="50" rx="4" fill="#111f35" stroke="#1e3254" stroke-width="1"/>
+          <text x="49" y="68" text-anchor="middle" font-size="14">👟</text>
+          <text x="49" y="82" text-anchor="middle" font-size="7" fill="#aaa">Sneakers</text>
+          <text x="49" y="92" text-anchor="middle" font-size="7" fill="#C9A227">$89.99</text>
+          <rect x="76" y="50" width="38" height="50" rx="4" fill="#111f35" stroke="#C9A227" stroke-width="1.5"/>
+          <text x="95" y="68" text-anchor="middle" font-size="14">👜</text>
+          <text x="95" y="82" text-anchor="middle" font-size="7" fill="#aaa">Handbag</text>
+          <text x="95" y="92" text-anchor="middle" font-size="7" fill="#C9A227">$149.99</text>
+          <rect x="122" y="50" width="38" height="50" rx="4" fill="#111f35" stroke="#1e3254" stroke-width="1"/>
+          <text x="141" y="68" text-anchor="middle" font-size="14">⌚</text>
+          <text x="141" y="82" text-anchor="middle" font-size="7" fill="#aaa">Watch</text>
+          <text x="141" y="92" text-anchor="middle" font-size="7" fill="#C9A227">$249.99</text>
+        </svg>
+      </div>
+      <div class="demo-card-body">
+        <div class="demo-card-title">🛍️ Online Store</div>
+        <button class="demo-card-bee" onclick="openBeePopup(1)" title="Ask the bee!">
+          <svg viewBox="0 0 40 40" fill="none" width="40" height="40"><ellipse cx="20" cy="27" rx="7" ry="8" fill="#E8C547"/><rect x="13.5" y="23" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><rect x="13.5" y="27" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><ellipse cx="20" cy="13" rx="7" ry="7.5" fill="#E8C547"/><ellipse cx="17" cy="12" rx="2" ry="2" fill="#0D1B2E"/><ellipse cx="23" cy="12" rx="2" ry="2" fill="#0D1B2E"/><circle cx="17.5" cy="11.2" r=".6" fill="white"/><circle cx="23.5" cy="11.2" r=".6" fill="white"/><ellipse cx="10" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(-25 10 11)"/><ellipse cx="30" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(25 30 11)"/><text x="14" y="28.5" font-size="5" fill="#0D1B2E" font-family="monospace" font-weight="bold">&lt;/&gt;</text></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. Portfolio -->
+    <div class="demo-card reveal">
+      <div class="demo-card-visual" style="background:linear-gradient(135deg,#0a001a 0%,#200040 100%);">
+        <svg viewBox="0 0 200 120" width="200" height="120" style="display:block;margin:auto;">
+          <rect x="20" y="15" width="72" height="52" rx="4" fill="#1a0040" stroke="#C9A227" stroke-width="1"/>
+          <text x="56" y="45" text-anchor="middle" font-size="22">🎨</text>
+          <rect x="108" y="15" width="72" height="24" rx="4" fill="#1a0040" stroke="#1e3254" stroke-width="1"/>
+          <text x="144" y="31" text-anchor="middle" font-size="12">📸</text>
+          <rect x="108" y="44" width="72" height="24" rx="4" fill="#1a0040" stroke="#1e3254" stroke-width="1"/>
+          <text x="144" y="60" text-anchor="middle" font-size="12">✏️</text>
+          <rect x="20" y="72" width="160" height="30" rx="4" fill="#1a0040" stroke="#1e3254" stroke-width="1"/>
+          <text x="100" y="91" text-anchor="middle" font-size="9" fill="#C9A227" font-family="'Bebas Neue',sans-serif" letter-spacing="1">JANE DOE — CREATIVE PORTFOLIO</text>
+        </svg>
+      </div>
+      <div class="demo-card-body">
+        <div class="demo-card-title">🎨 Portfolio Site</div>
+        <button class="demo-card-bee" onclick="openBeePopup(2)" title="Ask the bee!">
+          <svg viewBox="0 0 40 40" fill="none" width="40" height="40"><ellipse cx="20" cy="27" rx="7" ry="8" fill="#E8C547"/><rect x="13.5" y="23" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><rect x="13.5" y="27" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><ellipse cx="20" cy="13" rx="7" ry="7.5" fill="#E8C547"/><ellipse cx="17" cy="12" rx="2" ry="2" fill="#0D1B2E"/><ellipse cx="23" cy="12" rx="2" ry="2" fill="#0D1B2E"/><circle cx="17.5" cy="11.2" r=".6" fill="white"/><circle cx="23.5" cy="11.2" r=".6" fill="white"/><ellipse cx="10" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(-25 10 11)"/><ellipse cx="30" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(25 30 11)"/><text x="14" y="28.5" font-size="5" fill="#0D1B2E" font-family="monospace" font-weight="bold">&lt;/&gt;</text></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 4. Band / Artist -->
+    <div class="demo-card reveal">
+      <div class="demo-card-visual" style="background:linear-gradient(135deg,#0d0010 0%,#1a0028 100%);">
+        <svg viewBox="0 0 200 120" width="200" height="120" style="display:block;margin:auto;">
+          <circle cx="100" cy="55" r="38" fill="#1a0030" stroke="#C9A227" stroke-width="1.5"/>
+          <circle cx="100" cy="55" r="12" fill="#0a001a" stroke="#C9A227" stroke-width="1"/>
+          <circle cx="100" cy="55" r="3" fill="#C9A227"/>
+          <text x="100" y="36" text-anchor="middle" font-size="8" fill="#C9A227" opacity=".5">• • • • • •</text>
+          <text x="100" y="76" text-anchor="middle" font-size="8" fill="#C9A227" opacity=".5">• • • • • •</text>
+          <text x="100" y="100" text-anchor="middle" font-size="9" fill="#C9A227" font-family="'Bebas Neue',sans-serif" letter-spacing="3">TOUR 2025</text>
+          <text x="35" y="58" font-size="9" fill="#E8C547">🎵</text>
+          <text x="155" y="58" font-size="9" fill="#E8C547">🎵</text>
+        </svg>
+      </div>
+      <div class="demo-card-body">
+        <div class="demo-card-title">🎵 Band / Artist Page</div>
+        <button class="demo-card-bee" onclick="openBeePopup(3)" title="Ask the bee!">
+          <svg viewBox="0 0 40 40" fill="none" width="40" height="40"><ellipse cx="20" cy="27" rx="7" ry="8" fill="#E8C547"/><rect x="13.5" y="23" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><rect x="13.5" y="27" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><ellipse cx="20" cy="13" rx="7" ry="7.5" fill="#E8C547"/><ellipse cx="17" cy="12" rx="2" ry="2" fill="#0D1B2E"/><ellipse cx="23" cy="12" rx="2" ry="2" fill="#0D1B2E"/><circle cx="17.5" cy="11.2" r=".6" fill="white"/><circle cx="23.5" cy="11.2" r=".6" fill="white"/><ellipse cx="10" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(-25 10 11)"/><ellipse cx="30" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(25 30 11)"/><text x="14" y="28.5" font-size="5" fill="#0D1B2E" font-family="monospace" font-weight="bold">&lt;/&gt;</text></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 5. Business Landing Page -->
+    <div class="demo-card reveal">
+      <div class="demo-card-visual" style="background:linear-gradient(135deg,#001020 0%,#002040 100%);">
+        <svg viewBox="0 0 200 120" width="200" height="120" style="display:block;margin:auto;">
+          <rect x="15" y="15" width="170" height="90" rx="6" fill="#0a1a2e" stroke="#1e3254" stroke-width="1"/>
+          <rect x="15" y="15" width="170" height="30" rx="6" fill="#111f35"/>
+          <rect x="15" y="39" width="170" height="6" rx="0" fill="#111f35"/>
+          <text x="100" y="35" text-anchor="middle" font-size="10" fill="#C9A227" font-family="'Bebas Neue',sans-serif" letter-spacing="2">ACME SOLUTIONS</text>
+          <text x="100" y="62" text-anchor="middle" font-size="8" fill="#fff" font-family="sans-serif">We Build. We Deliver. We Maintain.</text>
+          <rect x="70" y="70" width="60" height="14" rx="3" fill="#C9A227"/>
+          <text x="100" y="80" text-anchor="middle" font-size="7" fill="#0a1a2e" font-weight="bold">GET STARTED →</text>
+          <rect x="30" y="92" width="32" height="8" rx="2" fill="#1e3254"/>
+          <rect x="84" y="92" width="32" height="8" rx="2" fill="#1e3254"/>
+          <rect x="138" y="92" width="32" height="8" rx="2" fill="#1e3254"/>
+        </svg>
+      </div>
+      <div class="demo-card-body">
+        <div class="demo-card-title">🏢 Business Landing Page</div>
+        <button class="demo-card-bee" onclick="openBeePopup(4)" title="Ask the bee!">
+          <svg viewBox="0 0 40 40" fill="none" width="40" height="40"><ellipse cx="20" cy="27" rx="7" ry="8" fill="#E8C547"/><rect x="13.5" y="23" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><rect x="13.5" y="27" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><ellipse cx="20" cy="13" rx="7" ry="7.5" fill="#E8C547"/><ellipse cx="17" cy="12" rx="2" ry="2" fill="#0D1B2E"/><ellipse cx="23" cy="12" rx="2" ry="2" fill="#0D1B2E"/><circle cx="17.5" cy="11.2" r=".6" fill="white"/><circle cx="23.5" cy="11.2" r=".6" fill="white"/><ellipse cx="10" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(-25 10 11)"/><ellipse cx="30" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(25 30 11)"/><text x="14" y="28.5" font-size="5" fill="#0D1B2E" font-family="monospace" font-weight="bold">&lt;/&gt;</text></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 6. Real Estate -->
+    <div class="demo-card reveal">
+      <div class="demo-card-visual" style="background:linear-gradient(135deg,#001a10 0%,#003020 100%);">
+        <svg viewBox="0 0 200 120" width="200" height="120" style="display:block;margin:auto;">
+          <polygon points="100,18 160,58 160,100 40,100 40,58" fill="#0d2018" stroke="#C9A227" stroke-width="1.5"/>
+          <polygon points="100,18 40,58 160,58" fill="#1a3a28" stroke="#C9A227" stroke-width="1"/>
+          <rect x="82" y="70" width="36" height="30" rx="2" fill="#0d2018" stroke="#C9A227" stroke-width=".8"/>
+          <circle cx="116" cy="85" r="2" fill="#C9A227"/>
+          <rect x="50" y="70" width="22" height="18" rx="2" fill="#0d2018" stroke="#1e3254" stroke-width=".8"/>
+          <rect x="128" y="70" width="22" height="18" rx="2" fill="#0d2018" stroke="#1e3254" stroke-width=".8"/>
+          <text x="100" y="112" text-anchor="middle" font-size="7" fill="#C9A227" font-family="'Bebas Neue',sans-serif" letter-spacing="1">3 BED · 2 BATH · $425K</text>
+        </svg>
+      </div>
+      <div class="demo-card-body">
+        <div class="demo-card-title">🏠 Real Estate Site</div>
+        <button class="demo-card-bee" onclick="openBeePopup(5)" title="Ask the bee!">
+          <svg viewBox="0 0 40 40" fill="none" width="40" height="40"><ellipse cx="20" cy="27" rx="7" ry="8" fill="#E8C547"/><rect x="13.5" y="23" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><rect x="13.5" y="27" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><ellipse cx="20" cy="13" rx="7" ry="7.5" fill="#E8C547"/><ellipse cx="17" cy="12" rx="2" ry="2" fill="#0D1B2E"/><ellipse cx="23" cy="12" rx="2" ry="2" fill="#0D1B2E"/><circle cx="17.5" cy="11.2" r=".6" fill="white"/><circle cx="23.5" cy="11.2" r=".6" fill="white"/><ellipse cx="10" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(-25 10 11)"/><ellipse cx="30" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(25 30 11)"/><text x="14" y="28.5" font-size="5" fill="#0D1B2E" font-family="monospace" font-weight="bold">&lt;/&gt;</text></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 7. Event / Venue -->
+    <div class="demo-card reveal">
+      <div class="demo-card-visual" style="background:linear-gradient(135deg,#1a0000 0%,#3a0020 100%);">
+        <svg viewBox="0 0 200 120" width="200" height="120" style="display:block;margin:auto;">
+          <circle cx="60" cy="45" r="20" fill="#2a0010" stroke="#C9A227" stroke-width="1"/>
+          <text x="60" y="51" text-anchor="middle" font-size="18">🎉</text>
+          <circle cx="120" cy="45" r="20" fill="#2a0010" stroke="#C9A227" stroke-width="1"/>
+          <text x="120" y="51" text-anchor="middle" font-size="18">🎟️</text>
+          <circle cx="165" cy="30" r="12" fill="#2a0010" stroke="#1e3254" stroke-width="1"/>
+          <text x="165" y="35" text-anchor="middle" font-size="11">🎶</text>
+          <rect x="20" y="75" width="160" height="30" rx="4" fill="#2a0010" stroke="#C9A227" stroke-width="1"/>
+          <text x="100" y="92" text-anchor="middle" font-size="9" fill="#C9A227" font-family="'Bebas Neue',sans-serif" letter-spacing="2">SAT MAY 10 · DOORS 7PM</text>
+          <text x="100" y="101" text-anchor="middle" font-size="7" fill="#aaa">Tickets starting at $25</text>
+        </svg>
+      </div>
+      <div class="demo-card-body">
+        <div class="demo-card-title">🎉 Event / Venue Page</div>
+        <button class="demo-card-bee" onclick="openBeePopup(6)" title="Ask the bee!">
+          <svg viewBox="0 0 40 40" fill="none" width="40" height="40"><ellipse cx="20" cy="27" rx="7" ry="8" fill="#E8C547"/><rect x="13.5" y="23" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><rect x="13.5" y="27" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><ellipse cx="20" cy="13" rx="7" ry="7.5" fill="#E8C547"/><ellipse cx="17" cy="12" rx="2" ry="2" fill="#0D1B2E"/><ellipse cx="23" cy="12" rx="2" ry="2" fill="#0D1B2E"/><circle cx="17.5" cy="11.2" r=".6" fill="white"/><circle cx="23.5" cy="11.2" r=".6" fill="white"/><ellipse cx="10" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(-25 10 11)"/><ellipse cx="30" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(25 30 11)"/><text x="14" y="28.5" font-size="5" fill="#0D1B2E" font-family="monospace" font-weight="bold">&lt;/&gt;</text></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 8. Blog / Content -->
+    <div class="demo-card reveal">
+      <div class="demo-card-visual" style="background:linear-gradient(135deg,#080e1a 0%,#0f1c30 100%);">
+        <svg viewBox="0 0 200 120" width="200" height="120" style="display:block;margin:auto;">
+          <rect x="20" y="15" width="160" height="90" rx="6" fill="#0a1628" stroke="#1e3254" stroke-width="1"/>
+          <rect x="30" y="25" width="80" height="40" rx="3" fill="#111f35"/>
+          <text x="70" y="50" text-anchor="middle" font-size="20">📝</text>
+          <rect x="120" y="25" width="50" height="8" rx="2" fill="#1e3254"/>
+          <rect x="120" y="37" width="50" height="8" rx="2" fill="#1e3254"/>
+          <rect x="120" y="49" width="40" height="8" rx="2" fill="#1e3254"/>
+          <rect x="30" y="72" width="60" height="6" rx="2" fill="#C9A227" opacity=".7"/>
+          <rect x="30" y="82" width="140" height="4" rx="2" fill="#1e3254"/>
+          <rect x="30" y="90" width="120" height="4" rx="2" fill="#1e3254"/>
+        </svg>
+      </div>
+      <div class="demo-card-body">
+        <div class="demo-card-title">📝 Blog / Content Site</div>
+        <button class="demo-card-bee" onclick="openBeePopup(7)" title="Ask the bee!">
+          <svg viewBox="0 0 40 40" fill="none" width="40" height="40"><ellipse cx="20" cy="27" rx="7" ry="8" fill="#E8C547"/><rect x="13.5" y="23" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><rect x="13.5" y="27" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><ellipse cx="20" cy="13" rx="7" ry="7.5" fill="#E8C547"/><ellipse cx="17" cy="12" rx="2" ry="2" fill="#0D1B2E"/><ellipse cx="23" cy="12" rx="2" ry="2" fill="#0D1B2E"/><circle cx="17.5" cy="11.2" r=".6" fill="white"/><circle cx="23.5" cy="11.2" r=".6" fill="white"/><ellipse cx="10" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(-25 10 11)"/><ellipse cx="30" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(25 30 11)"/><text x="14" y="28.5" font-size="5" fill="#0D1B2E" font-family="monospace" font-weight="bold">&lt;/&gt;</text></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 9. Custom App / Tool -->
+    <div class="demo-card reveal">
+      <div class="demo-card-visual" style="background:linear-gradient(135deg,#050a1a 0%,#0a1428 100%);">
+        <svg viewBox="0 0 200 120" width="200" height="120" style="display:block;margin:auto;">
+          <rect x="20" y="12" width="160" height="96" rx="6" fill="#080e1a" stroke="#C9A227" stroke-width="1.5"/>
+          <rect x="20" y="12" width="160" height="20" rx="6" fill="#0f1c30"/>
+          <rect x="20" y="26" width="160" height="6" fill="#0f1c30"/>
+          <circle cx="33" cy="22" r="4" fill="#ff6060" opacity=".7"/>
+          <circle cx="46" cy="22" r="4" fill="#ffaa00" opacity=".7"/>
+          <circle cx="59" cy="22" r="4" fill="#60ff80" opacity=".7"/>
+          <text x="30" y="50" font-size="7" fill="#60ff80" font-family="monospace">&gt; BeezerBuilt.init()</text>
+          <text x="30" y="62" font-size="7" fill="#C9A227" font-family="monospace">✓ Domain registered</text>
+          <text x="30" y="74" font-size="7" fill="#C9A227" font-family="monospace">✓ SSL activated</text>
+          <text x="30" y="86" font-size="7" fill="#C9A227" font-family="monospace">✓ Deploying site...</text>
+          <text x="30" y="98" font-size="7" fill="#60ff80" font-family="monospace">🚀 LIVE at yourdomain.com</text>
+        </svg>
+      </div>
+      <div class="demo-card-body">
+        <div class="demo-card-title">⚙️ Custom App / Tool</div>
+        <button class="demo-card-bee" onclick="openBeePopup(8)" title="Ask the bee!">
+          <svg viewBox="0 0 40 40" fill="none" width="40" height="40"><ellipse cx="20" cy="27" rx="7" ry="8" fill="#E8C547"/><rect x="13.5" y="23" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><rect x="13.5" y="27" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><ellipse cx="20" cy="13" rx="7" ry="7.5" fill="#E8C547"/><ellipse cx="17" cy="12" rx="2" ry="2" fill="#0D1B2E"/><ellipse cx="23" cy="12" rx="2" ry="2" fill="#0D1B2E"/><circle cx="17.5" cy="11.2" r=".6" fill="white"/><circle cx="23.5" cy="11.2" r=".6" fill="white"/><ellipse cx="10" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(-25 10 11)"/><ellipse cx="30" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(25 30 11)"/><text x="14" y="28.5" font-size="5" fill="#0D1B2E" font-family="monospace" font-weight="bold">&lt;/&gt;</text></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 10. Non-Profit -->
+    <div class="demo-card reveal">
+      <div class="demo-card-visual" style="background:linear-gradient(135deg,#001510 0%,#002a20 100%);">
+        <svg viewBox="0 0 200 120" width="200" height="120" style="display:block;margin:auto;">
+          <circle cx="100" cy="50" r="35" fill="#0a2018" stroke="#C9A227" stroke-width="1.5"/>
+          <text x="100" y="60" text-anchor="middle" font-size="30">🤝</text>
+          <text x="100" y="98" text-anchor="middle" font-size="9" fill="#C9A227" font-family="'Bebas Neue',sans-serif" letter-spacing="2">COMMUNITY FIRST</text>
+          <rect x="30" y="105" width="50" height="10" rx="3" fill="#C9A227"/>
+          <text x="55" y="113" text-anchor="middle" font-size="6.5" fill="#0a2018" font-weight="bold">DONATE NOW</text>
+          <rect x="120" y="105" width="50" height="10" rx="3" fill="#0a2018" stroke="#C9A227" stroke-width="1"/>
+          <text x="145" y="113" text-anchor="middle" font-size="6.5" fill="#C9A227">VOLUNTEER</text>
+        </svg>
+      </div>
+      <div class="demo-card-body">
+        <div class="demo-card-title">🤝 Non-Profit / Community</div>
+        <button class="demo-card-bee" onclick="openBeePopup(9)" title="Ask the bee!">
+          <svg viewBox="0 0 40 40" fill="none" width="40" height="40"><ellipse cx="20" cy="27" rx="7" ry="8" fill="#E8C547"/><rect x="13.5" y="23" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><rect x="13.5" y="27" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><ellipse cx="20" cy="13" rx="7" ry="7.5" fill="#E8C547"/><ellipse cx="17" cy="12" rx="2" ry="2" fill="#0D1B2E"/><ellipse cx="23" cy="12" rx="2" ry="2" fill="#0D1B2E"/><circle cx="17.5" cy="11.2" r=".6" fill="white"/><circle cx="23.5" cy="11.2" r=".6" fill="white"/><ellipse cx="10" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(-25 10 11)"/><ellipse cx="30" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(25 30 11)"/><text x="14" y="28.5" font-size="5" fill="#0D1B2E" font-family="monospace" font-weight="bold">&lt;/&gt;</text></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 11. Membership -->
+    <div class="demo-card reveal">
+      <div class="demo-card-visual" style="background:linear-gradient(135deg,#0a0820 0%,#1a1440 100%);">
+        <svg viewBox="0 0 200 120" width="200" height="120" style="display:block;margin:auto;">
+          <rect x="60" y="18" width="80" height="65" rx="6" fill="#0f0c2a" stroke="#C9A227" stroke-width="1.5"/>
+          <text x="100" y="42" text-anchor="middle" font-size="18">🔑</text>
+          <rect x="75" y="50" width="50" height="10" rx="3" fill="#1e1a40" stroke="#1e3254" stroke-width=".8"/>
+          <text x="100" y="58" text-anchor="middle" font-size="6" fill="#7a8fad">••••••••••</text>
+          <rect x="75" y="65" width="50" height="10" rx="3" fill="#C9A227"/>
+          <text x="100" y="73" text-anchor="middle" font-size="6.5" fill="#0a0820" font-weight="bold">LOGIN →</text>
+          <text x="100" y="95" text-anchor="middle" font-size="8" fill="#C9A227" font-family="'Bebas Neue',sans-serif" letter-spacing="1">MEMBERS ONLY ACCESS</text>
+          <text x="100" y="108" text-anchor="middle" font-size="7" fill="#7a8fad">Exclusive content · Premium features</text>
+        </svg>
+      </div>
+      <div class="demo-card-body">
+        <div class="demo-card-title">🔑 Membership Site</div>
+        <button class="demo-card-bee" onclick="openBeePopup(10)" title="Ask the bee!">
+          <svg viewBox="0 0 40 40" fill="none" width="40" height="40"><ellipse cx="20" cy="27" rx="7" ry="8" fill="#E8C547"/><rect x="13.5" y="23" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><rect x="13.5" y="27" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><ellipse cx="20" cy="13" rx="7" ry="7.5" fill="#E8C547"/><ellipse cx="17" cy="12" rx="2" ry="2" fill="#0D1B2E"/><ellipse cx="23" cy="12" rx="2" ry="2" fill="#0D1B2E"/><circle cx="17.5" cy="11.2" r=".6" fill="white"/><circle cx="23.5" cy="11.2" r=".6" fill="white"/><ellipse cx="10" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(-25 10 11)"/><ellipse cx="30" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(25 30 11)"/><text x="14" y="28.5" font-size="5" fill="#0D1B2E" font-family="monospace" font-weight="bold">&lt;/&gt;</text></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 12. Full Setup -->
+    <div class="demo-card reveal">
+      <div class="demo-card-visual" style="background:linear-gradient(135deg,#120800 0%,#2a1800 100%);">
+        <svg viewBox="0 0 200 120" width="200" height="120" style="display:block;margin:auto;">
+          <circle cx="100" cy="55" r="38" fill="#1a0c00" stroke="#C9A227" stroke-width="1.5" stroke-dasharray="4 2"/>
+          <circle cx="100" cy="55" r="28" fill="#0d0800" stroke="#C9A227" stroke-width="1"/>
+          <text x="100" y="62" text-anchor="middle" font-size="26">🌐</text>
+          <text x="100" y="103" text-anchor="middle" font-size="8" fill="#C9A227" font-family="'Bebas Neue',sans-serif" letter-spacing="2">DOMAIN · HOST · SSL · LAUNCH</text>
+          <circle cx="50" cy="30" r="8" fill="#2a1800" stroke="#C9A227" stroke-width="1"/>
+          <text x="50" y="34" text-anchor="middle" font-size="8">🔒</text>
+          <circle cx="150" cy="30" r="8" fill="#2a1800" stroke="#C9A227" stroke-width="1"/>
+          <text x="150" y="34" text-anchor="middle" font-size="8">📧</text>
+          <circle cx="50" cy="80" r="8" fill="#2a1800" stroke="#C9A227" stroke-width="1"/>
+          <text x="50" y="84" text-anchor="middle" font-size="8">⚡</text>
+          <circle cx="150" cy="80" r="8" fill="#2a1800" stroke="#C9A227" stroke-width="1"/>
+          <text x="150" y="84" text-anchor="middle" font-size="8">🛡️</text>
+        </svg>
+      </div>
+      <div class="demo-card-body">
+        <div class="demo-card-title">🌐 Full Setup Package</div>
+        <button class="demo-card-bee" onclick="openBeePopup(11)" title="Ask the bee!">
+          <svg viewBox="0 0 40 40" fill="none" width="40" height="40"><ellipse cx="20" cy="27" rx="7" ry="8" fill="#E8C547"/><rect x="13.5" y="23" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><rect x="13.5" y="27" width="13" height="2.2" rx="1" fill="#0D1B2E" opacity=".7"/><ellipse cx="20" cy="13" rx="7" ry="7.5" fill="#E8C547"/><ellipse cx="17" cy="12" rx="2" ry="2" fill="#0D1B2E"/><ellipse cx="23" cy="12" rx="2" ry="2" fill="#0D1B2E"/><circle cx="17.5" cy="11.2" r=".6" fill="white"/><circle cx="23.5" cy="11.2" r=".6" fill="white"/><ellipse cx="10" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(-25 10 11)"/><ellipse cx="30" cy="11" rx="8" ry="4" fill="rgba(255,255,255,0.82)" transform="rotate(25 30 11)"/><text x="14" y="28.5" font-size="5" fill="#0D1B2E" font-family="monospace" font-weight="bold">&lt;/&gt;</text></svg>
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /demo-card-grid -->
+
+  <div style="text-align:center;margin-top:56px;">
+    <p style="color:var(--gray);margin-bottom:16px;">Ready to get yours? Let's make it happen.</p>
     <a href="#" class="btn-primary" onclick="switchTab('quote');return false;">Start My Project →</a>
   </div>
 </section>
 </div><!-- /tab-demo -->
+
+<!-- ============================================================
+     SANDBOX MODAL
+============================================================ -->
+<div id="sandboxModal" aria-modal="true" role="dialog" aria-label="Sandbox Builder">
+  <div id="sandboxModalBox">
+    <button id="sandboxModalClose" onclick="closeSandboxModal()" title="Close">✕</button>
+    <iframe
+      id="sandboxIframe"
+      src=""
+      title="BeezerBuilt Sandbox"
+      allowfullscreen
+    ></iframe>
+  </div>
+</div>
+
+<style>
+/* ── Sandbox Modal ── */
+#sandboxModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  background: rgba(4, 8, 16, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+#sandboxModal.open { display: flex; }
+
+#sandboxModalBox {
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  height: clamp(480px, 82vh, 860px);
+  background: var(--navy-card);
+  border: 1.5px solid rgba(201,162,39,.35);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,.7);
+  animation: fadeUp .3s ease;
+}
+
+#sandboxModalClose {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 10;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(8,14,26,.85);
+  border: 1px solid rgba(201,162,39,.3);
+  color: var(--gray-light);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .2s, color .2s, border-color .2s;
+}
+#sandboxModalClose:hover {
+  background: rgba(201,162,39,.15);
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+#sandboxIframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+</style>
+
+<script>
+  window.openSandboxModal = function() {
+    const iframe = document.getElementById('sandboxIframe');
+    if (!iframe.src || iframe.src === window.location.href) {
+      iframe.src = 'htdocs/sandbox.html';
+    }
+    const modal = document.getElementById('sandboxModal');
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  };
+
+  window.closeSandboxModal = function() {
+    document.getElementById('sandboxModal').classList.remove('open');
+    document.body.style.overflow = '';
+  };
+
+  // Close on backdrop click
+  document.getElementById('sandboxModal').addEventListener('click', function(e) {
+    if (e.target === this) closeSandboxModal();
+  });
+
+  // Close on Escape (add to existing keydown listener)
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeSandboxModal();
+  });
+</script>
+
+<!-- ============================================================
+     BEE POPUP MODAL
+============================================================ -->
+<div id="beePopupOverlay" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(8,14,26,.85);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px;" onclick="closeBeePopup(event)">
+  <div id="beePopupBox" style="background:var(--navy-card);border:1.5px solid var(--gold);border-radius:14px;max-width:520px;width:100%;padding:36px 32px 32px;position:relative;animation:fadeUp .35s ease;">
+    <button onclick="closeBeePopup()" style="position:absolute;top:14px;right:16px;font-size:1.3rem;color:var(--gray);background:none;border:none;cursor:pointer;line-height:1;">✕</button>
+
+    <!-- Bee + speech bubble row -->
+    <div style="display:flex;align-items:flex-start;gap:18px;margin-bottom:24px;">
+      <div style="flex-shrink:0;">
+        <svg viewBox="0 0 80 80" fill="none" width="72" height="72" style="filter:drop-shadow(0 0 14px rgba(201,162,39,.35));animation:beeBob 3s ease-in-out infinite;">
+          <defs>
+            <radialGradient id="pBodyGrad" cx="40%" cy="35%" r="60%"><stop offset="0%" stop-color="#E8C547"/><stop offset="100%" stop-color="#9A7A10"/></radialGradient>
+            <radialGradient id="pHeadGrad" cx="40%" cy="35%" r="60%"><stop offset="0%" stop-color="#E8C547"/><stop offset="100%" stop-color="#C9A227"/></radialGradient>
+            <linearGradient id="pWingGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="rgba(255,255,255,0.92)"/><stop offset="100%" stop-color="rgba(200,220,255,0.55)"/></linearGradient>
+          </defs>
+          <ellipse cx="19" cy="26" rx="17" ry="8.5" fill="url(#pWingGrad)" transform="rotate(-28 19 26)"/>
+          <ellipse cx="61" cy="26" rx="17" ry="8.5" fill="url(#pWingGrad)" transform="rotate(28 61 26)"/>
+          <ellipse cx="23" cy="36" rx="10" ry="5" fill="rgba(255,255,255,0.5)" transform="rotate(-15 23 36)"/>
+          <ellipse cx="57" cy="36" rx="10" ry="5" fill="rgba(255,255,255,0.5)" transform="rotate(15 57 36)"/>
+          <ellipse cx="40" cy="54" rx="13" ry="16" fill="url(#pBodyGrad)"/>
+          <rect x="27.5" y="47" width="25" height="4.5" rx="1.5" fill="#0D1B2E" opacity="0.72"/>
+          <rect x="27.5" y="54" width="25" height="4.5" rx="1.5" fill="#0D1B2E" opacity="0.72"/>
+          <rect x="29" y="61" width="22" height="3" rx="1.5" fill="#0D1B2E" opacity="0.5"/>
+          <ellipse cx="40" cy="26" rx="13" ry="14" fill="url(#pHeadGrad)"/>
+          <ellipse cx="34" cy="24" rx="3.5" ry="3.5" fill="#0D1B2E"/>
+          <ellipse cx="46" cy="24" rx="3.5" ry="3.5" fill="#0D1B2E"/>
+          <circle cx="35.2" cy="22.8" r="1.1" fill="white"/>
+          <circle cx="47.2" cy="22.8" r="1.1" fill="white"/>
+          <path d="M36 31 Q40 34 44 31" stroke="#0D1B2E" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.8"/>
+          <text x="29.5" y="56" font-size="9.5" fill="#0D1B2E" font-family="monospace" font-weight="bold">&lt;/&gt;</text>
+          <polygon points="40,70 37,76 43,76" fill="#7A5F0A"/>
+          <path d="M36 13 Q32 8 27 6" stroke="#5A4010" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          <path d="M44 13 Q48 8 53 6" stroke="#5A4010" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          <circle cx="27" cy="6" r="3" fill="#C9A227" stroke="#5A4010" stroke-width="0.8"/>
+          <circle cx="53" cy="6" r="3" fill="#C9A227" stroke="#5A4010" stroke-width="0.8"/>
+        </svg>
+      </div>
+      <!-- Speech bubble -->
+      <div style="flex:1;background:var(--navy-mid);border:1px solid var(--navy-border);border-radius:12px 12px 12px 4px;padding:16px 18px;position:relative;">
+        <div style="position:absolute;left:-10px;top:16px;width:0;height:0;border-top:8px solid transparent;border-bottom:8px solid transparent;border-right:10px solid var(--navy-mid);"></div>
+        <div id="beePopupEmoji" style="font-size:1.6rem;margin-bottom:6px;"></div>
+        <div id="beePopupTitle" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.04em;color:var(--gold);margin-bottom:8px;"></div>
+        <div id="beePopupText" style="font-size:.92rem;color:var(--gray-light);line-height:1.65;"></div>
+      </div>
+    </div>
+
+    <a href="#" class="btn-primary" style="width:100%;justify-content:center;display:flex;" onclick="closeBeePopup();switchTab('quote');return false;">Build This For Me →</a>
+  </div>
+</div>
+
+<style>
+/* ─── Demo Card Grid ─── */
+.demo-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 24px;
+}
+.demo-card {
+  background: var(--navy-card);
+  border: 1px solid var(--navy-border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform .3s ease, border-color .3s ease, box-shadow .3s ease;
+  cursor: default;
+}
+.demo-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(201,162,39,.45);
+  box-shadow: 0 12px 40px rgba(201,162,39,.1);
+}
+.demo-card-visual {
+  width: 100%; height: 140px;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.demo-card-body {
+  padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.demo-card-title {
+  font-weight: 700; font-size: .95rem;
+  color: var(--white);
+  line-height: 1.3;
+}
+.demo-card-bee {
+  flex-shrink: 0;
+  background: rgba(201,162,39,.1);
+  border: 1.5px solid rgba(201,162,39,.3);
+  border-radius: 50%;
+  width: 52px; height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.demo-card-bee:hover {
+  background: rgba(201,162,39,.22);
+  border-color: var(--gold);
+  transform: scale(1.1) rotate(-8deg);
+  box-shadow: 0 0 14px rgba(201,162,39,.3);
+}
+#beePopupOverlay.open { display: flex !important; }
+</style>
+
+<script>
+  const beeData = [
+    {
+      emoji: '🍽️',
+      title: 'Restaurant Website',
+      text: "Buzzzz! Your restaurant deserves a site that works as hard as you do. We build full menus with live price updates, an online order form that emails straight to you, a reservation calendar, loyalty points tracker, daily specials that change automatically — and more. Customers can find you, order from you, and book a table, all in one place. No tech headaches required."
+    },
+    {
+      emoji: '🛍️',
+      title: 'Online Store',
+      text: "Ready to sell? We build full e-commerce stores with product pages, a shopping cart, and payment via Stripe or Buy Me a Coffee. Customers browse, pick their items, and check out — the money goes straight to you. We handle product listings, filters, sale badges, shipping options, and a mobile-friendly design so you never lose a sale to a clunky phone experience."
+    },
+    {
+      emoji: '🎨',
+      title: 'Portfolio / Showcase Site',
+      text: "Your work is incredible — it deserves a stage to match. We build sleek portfolio sites with image galleries, lazy-loading photos, smooth scroll transitions, and filterable project categories. Whether you're a photographer, designer, architect, or artist, potential clients will land on your site and immediately understand why you're the one they should hire."
+    },
+    {
+      emoji: '🎵',
+      title: 'Band / Artist Page',
+      text: "Your music needs a home. We build artist sites with streaming links, an embedded music player, tour date calendars, a merch store, and press / bio sections. Fans land on the page and immediately connect with your vibe. Got a new album dropping? We can add a countdown, a mailing list signup, and pre-order buttons so your launch goes off without a hitch."
+    },
+    {
+      emoji: '🏢',
+      title: 'Business Landing Page',
+      text: "First impressions close deals. We build sharp, professional landing pages that show exactly what you do, why you're the best at it, and make it dead simple for someone to reach out. We include your services, testimonials, a smart contact form, Google Maps, trust badges, and an FAQ — everything a potential customer needs to go from 'maybe' to 'let's do it.'"
+    },
+    {
+      emoji: '🏠',
+      title: 'Real Estate Site',
+      text: "Stand out in a crowded market. We build real estate sites with stunning property listing pages, photo galleries, embedded maps, contact forms that go straight to you, agent bio sections, and neighborhood info. Looking to add an IDX feed for live MLS listings? We can wire that up too. Your buyers and sellers will love how easy it is to navigate."
+    },
+    {
+      emoji: '🎉',
+      title: 'Event / Venue Page',
+      text: "Pack the house. We build event sites with date and time displays, ticket purchase buttons, venue maps, RSVP forms, and a countdown clock to build excitement. Hosting recurring events? We'll build a schedule page that updates easily. Whether it's a concert, a class, a gala, or a festival — your audience will know exactly where to be and how to get there."
+    },
+    {
+      emoji: '📝',
+      title: 'Blog / Content Site',
+      text: "Got something to say? We build content-first sites with clean article layouts, category filters, a newsletter signup, search functionality, and a comment section if you want one. SEO is baked in from day one — title tags, meta descriptions, schema markup — so Google finds your posts and sends you the traffic you deserve. Write once, reach thousands."
+    },
+    {
+      emoji: '⚙️',
+      title: 'Custom App / Tool',
+      text: "Got a wild idea? Bring it. We've built batch dialers, pricing calculators, client portals, booking dashboards, internal ops tools, and more. If you can describe what you need it to do, we can code it. Every custom app comes with a clean UI, mobile-friendly design, and any backend integrations you need — Zapier, Airtable, Google Sheets, whatever fits your workflow."
+    },
+    {
+      emoji: '🤝',
+      title: 'Non-Profit / Community Site',
+      text: "Your mission matters — let's make sure the world sees it. We build non-profit sites with a bold mission statement, donation buttons (PayPal, Stripe, or GoFundMe links), volunteer signup forms, an events calendar, and an impact stats section. We want your donors and volunteers to feel the heart behind every page — because a great website raises more money and more hands."
+    },
+    {
+      emoji: '🔑',
+      title: 'Membership Site',
+      text: "Build a community, not just an audience. We create membership sites with secure login areas, gated content pages, subscriber tiers, and renewal reminders. Perfect for online courses, coaching programs, premium newsletters, or fan clubs. Members get a personalized dashboard. You get a recurring revenue stream. It's a win-win — and way simpler than you'd think."
+    },
+    {
+      emoji: '🌐',
+      title: 'Full Setup Package',
+      text: "Starting from zero? No problem. We handle everything — domain registration, web hosting, SSL certificate, custom email (you@yourbusiness.com), and of course, the website itself. You tell me your vision, I handle every technical step. No surprise bills, no hidden fees. When we hand it over, it's fully live, secure, and ready to bring you business from day one."
+    }
+  ];
+
+  window.openBeePopup = function(idx) {
+    const d = beeData[idx];
+    document.getElementById('beePopupEmoji').textContent = d.emoji;
+    document.getElementById('beePopupTitle').textContent = d.title;
+    document.getElementById('beePopupText').textContent = d.text;
+    const overlay = document.getElementById('beePopupOverlay');
+    overlay.classList.add('open');
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  };
+
+  window.closeBeePopup = function(e) {
+    if (e && e.target !== document.getElementById('beePopupOverlay')) return;
+    const overlay = document.getElementById('beePopupOverlay');
+    overlay.classList.remove('open');
+    overlay.style.display = 'none';
+    document.body.style.overflow = '';
+  };
+
+  // Close on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      const overlay = document.getElementById('beePopupOverlay');
+      if (overlay.style.display === 'flex') {
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+      }
+    }
+  });
+</script>
 
 <!-- ============================================================
      TAB: RESTAURANT FEATURES
@@ -1679,443 +2526,309 @@
 <section id="restaurant">
   <div class="section-label" data-i18n="rest_label">Built For Restaurants</div>
   <h2 class="section-title" data-i18n="rest_title">Restaurant <span class="gold">Features</span></h2>
-  <p class="section-desc" data-i18n="rest_desc">Every feature below can be built into your restaurant website — all free if you code it yourself, or I'll build it for you.</p>
+  <p class="section-desc" data-i18n="rest_desc">Click any feature to hear the bee explain exactly what it does, how it works, and why your restaurant needs it.</p>
 
-  <div class="rest-intro-box">
-    <strong>📧 How orders work:</strong> Every order form on this page sends directly to your restaurant's email via Formspree (free). Your customer fills out the form, hits send, and you get a clean email with their name, phone, order, and any customizations. You then call them back to confirm and take payment over the phone — no payment processor needed.
-  </div>
+  <div class="rf-grid">
 
-  <div class="rest-features-grid">
-
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">📞</div>
-        <div>
-          <div class="rest-feature-title">Order Form + Phone Confirm</div>
-          <span class="rest-feature-tag">Sends to your email</span>
-        </div>
+    <!-- 1. Order Form + Phone Confirm -->
+    <div class="rf-card reveal" onclick="restBee(0)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#0d1a10 0%,#1a3020 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <rect x="20" y="10" width="120" height="80" rx="6" fill="#0a1a10" stroke="#C9A227" stroke-width="1.2"/>
+          <text x="80" y="30" text-anchor="middle" font-size="8" fill="#C9A227" font-family="'Bebas Neue',sans-serif" letter-spacing="1">PLACE YOUR ORDER</text>
+          <rect x="32" y="36" width="96" height="10" rx="3" fill="#1a3020" stroke="#2a4a30" stroke-width=".8"/>
+          <text x="38" y="44" font-size="6" fill="#7a8fad">Your Name</text>
+          <rect x="32" y="50" width="96" height="10" rx="3" fill="#1a3020" stroke="#2a4a30" stroke-width=".8"/>
+          <text x="38" y="58" font-size="6" fill="#7a8fad">Phone Number</text>
+          <rect x="32" y="66" width="96" height="14" rx="3" fill="#C9A227"/>
+          <text x="80" y="76" text-anchor="middle" font-size="7" fill="#0a1a10" font-weight="bold">📧 SEND ORDER</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">Customer fills in their name, phone, and what they want. The order lands in your email. You call them back to confirm and take payment over the phone — no card processor required.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> Uses Formspree (free). You get an email like "John wants a Burger + no onions. Call: (555) 123-4567." You call, confirm, charge by phone.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Live Demo — pick an item</div>
-          <div class="rest-order-form">
-            <input type="text" placeholder="Your Name" />
-            <input type="tel" placeholder="Phone Number (we'll call to confirm)" />
-            <select id="demoItem" onchange="showModifiers(this)">
-              <option value="">— Pick an item —</option>
-              <option value="burger" data-mods="With Cheese,No Onions,Extra Pickles,Well Done">Classic Burger — $12.99</option>
-              <option value="pizza" data-mods="Extra Cheese,No Mushrooms,Thin Crust,Gluten Free">Pepperoni Pizza — $16.99</option>
-              <option value="salad" data-mods="No Croutons,Extra Dressing,Add Chicken">Caesar Salad — $9.99</option>
-            </select>
-            <div class="modifier-group" id="modGroup"></div>
-            <button class="rest-submit-btn" onclick="alert('In production this emails the restaurant: name, phone, item, and selected modifiers.')">📧 Place Order (sends to restaurant)</button>
-          </div>
-        </div>
-      </div>
+      <div class="rf-card-title">📞 Order Form + Phone Confirm</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">💰</div>
-        <div>
-          <div class="rest-feature-title">Live Price Menu</div>
-          <span class="rest-feature-tag">Updates as you pick</span>
-        </div>
+    <!-- 2. Live Price Menu -->
+    <div class="rf-card reveal" onclick="restBee(1)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#0a1000 0%,#1e2800 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <rect x="15" y="8" width="130" height="84" rx="6" fill="#0f1a00" stroke="#C9A227" stroke-width="1"/>
+          <text x="80" y="24" text-anchor="middle" font-size="8" fill="#C9A227" font-family="'Bebas Neue',sans-serif" letter-spacing="1">MENU</text>
+          <line x1="25" y1="28" x2="135" y2="28" stroke="#C9A227" stroke-width=".4" opacity=".4"/>
+          <text x="28" y="40" font-size="7" fill="#e8c547">🍔 Burger</text><text x="132" y="40" font-size="7" fill="#e8c547" text-anchor="end">$12.99</text>
+          <text x="28" y="53" font-size="7" fill="#e8c547">🥗 Salad</text><text x="132" y="53" font-size="7" fill="#e8c547" text-anchor="end">$9.99</text>
+          <text x="28" y="66" font-size="7" fill="#e8c547">🍕 Pizza</text><text x="132" y="66" font-size="7" fill="#e8c547" text-anchor="end">$16.99</text>
+          <line x1="25" y1="72" x2="135" y2="72" stroke="#C9A227" stroke-width=".4" opacity=".4"/>
+          <text x="28" y="84" font-size="7" fill="#fff" font-weight="bold">🛒 Total</text>
+          <text x="132" y="84" font-size="8" fill="#C9A227" text-anchor="end" font-weight="bold">$39.97</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">As customers click items, the total updates instantly at the bottom. No surprises — they see exactly what they owe before calling.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> Pure JavaScript math — every item has a price, clicking adds or subtracts from a running total in real time. No server needed.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Click items to add/remove</div>
-          <div id="livePriceMenu" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
-          <div class="rest-cart"><div class="cart-row"><span class="cart-name">🛒 Running Total</span><span class="cart-price" id="liveTotal">$0.00</span></div></div>
-        </div>
-      </div>
+      <div class="rf-card-title">💰 Live Price Menu</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">🛒</div>
-        <div>
-          <div class="rest-feature-title">Browser Cart</div>
-          <span class="rest-feature-tag">Saves your order</span>
-        </div>
+    <!-- 3. Browser Cart -->
+    <div class="rf-card reveal" onclick="restBee(2)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#001020 0%,#002040 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <text x="80" y="38" text-anchor="middle" font-size="38">🛒</text>
+          <rect x="30" y="52" width="100" height="8" rx="3" fill="#111f35" stroke="#1e3254" stroke-width=".8"/>
+          <rect x="30" y="52" width="68" height="8" rx="3" fill="#C9A227"/>
+          <text x="80" y="72" text-anchor="middle" font-size="7" fill="#b0c0d6">3 items · $39.48 saved</text>
+          <text x="80" y="84" text-anchor="middle" font-size="6" fill="#7a8fad">Remembers your cart between visits</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">The cart remembers everything added — even if they switch pages or close the tab. When ready, they submit one clean order to your email.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> Items stored in the browser's localStorage. When they submit, all items bundle into a single order email sent to you.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Live Demo</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-            <button class="rest-submit-btn" style="flex:1;padding:6px;font-size:.75rem;" onclick="cartAdd('Tacos x2','$8.50')">+ Tacos $8.50</button>
-            <button class="rest-submit-btn" style="flex:1;padding:6px;font-size:.75rem;background:var(--navy-border);color:var(--white);" onclick="cartAdd('Drink','$2.50')">+ Drink $2.50</button>
-            <button class="rest-submit-btn" style="flex:1;padding:6px;font-size:.75rem;background:rgba(255,60,60,.2);color:#ff8888;" onclick="cartClear()">Clear</button>
-          </div>
-          <div class="rest-cart" id="demoCart"><div class="cart-row"><span class="cart-name" style="opacity:.4;font-style:italic">Cart is empty</span></div></div>
-        </div>
-      </div>
+      <div class="rf-card-title">🛒 Browser Cart</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">🌙</div>
-        <div>
-          <div class="rest-feature-title">Dark Mode Toggle</div>
-          <span class="rest-feature-tag">Night-time browsing</span>
-        </div>
+    <!-- 4. Dark Mode Toggle -->
+    <div class="rf-card reveal" onclick="restBee(3)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#050510 0%,#0f0f28 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <rect x="20" y="18" width="52" height="64" rx="5" fill="#0a0a20" stroke="#C9A227" stroke-width="1"/>
+          <text x="46" y="55" text-anchor="middle" font-size="9" fill="#fff">☀️ LIGHT</text>
+          <rect x="88" y="18" width="52" height="64" rx="5" fill="#02020a" stroke="#C9A227" stroke-width="1.5"/>
+          <text x="114" y="55" text-anchor="middle" font-size="9" fill="#e8c547">🌙 DARK</text>
+          <rect x="66" y="42" width="28" height="16" rx="8" fill="#1e3254"/>
+          <circle cx="86" cy="50" r="6" fill="#C9A227"/>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">Customers flip between light and dark themes. Perfect for late-night browsing — no blinding white screen in a dark restaurant.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> A toggle swaps a CSS class on the page. The browser remembers their preference via localStorage so it sticks between visits.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Live Demo — toggle it</div>
-          <div id="darkModeDemo" style="background:var(--navy-card);border-radius:8px;padding:14px;transition:all .4s;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <span id="darkModeLabel" style="font-size:.85rem;color:var(--gray-light);">🌙 Dark Mode is ON</span>
-              <div class="small-toggle on" id="darkModeToggle" onclick="toggleDarkDemo()"></div>
-            </div>
-            <p id="darkModeText" style="font-size:.8rem;margin-top:8px;color:var(--gray);">Your menu looks like this at night. Easy on the eyes.</p>
-          </div>
-        </div>
-      </div>
+      <div class="rf-card-title">🌙 Dark Mode Toggle</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">🌟</div>
-        <div>
-          <div class="rest-feature-title">Today's Specials (Auto by Day)</div>
-          <span class="rest-feature-tag">Changes automatically</span>
-        </div>
+    <!-- 5. Today's Specials -->
+    <div class="rf-card reveal" onclick="restBee(4)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#1a1000 0%,#2e1e00 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <text x="80" y="35" text-anchor="middle" font-size="22">🌟</text>
+          <text x="80" y="52" text-anchor="middle" font-size="9" fill="#C9A227" font-family="'Bebas Neue',sans-serif" letter-spacing="1">TODAY'S SPECIAL</text>
+          <rect x="25" y="58" width="110" height="28" rx="5" fill="#1a1000" stroke="#C9A227" stroke-width="1"/>
+          <text x="80" y="70" text-anchor="middle" font-size="7.5" fill="#e8c547">🥩 Ribeye + Soup of the Day</text>
+          <text x="80" y="81" text-anchor="middle" font-size="8" fill="#C9A227" font-weight="bold">$28 — Monday Only</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">Set a different special for each day of the week once — the website shows the right one automatically every day without you touching anything.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> JavaScript reads the current day of the week and picks from your pre-set list. Set it once, it runs forever.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Click a day to preview</div>
-          <div class="day-pills" id="dayPills"></div>
-          <div class="special-display" id="specialDisplay">Click a day above ↑</div>
-        </div>
-      </div>
+      <div class="rf-card-title">🌟 Today's Specials (Auto by Day)</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">📅</div>
-        <div>
-          <div class="rest-feature-title">Reservation Calendar</div>
-          <span class="rest-feature-tag">Blocks busy dates</span>
-        </div>
+    <!-- 6. Reservation Calendar -->
+    <div class="rf-card reveal" onclick="restBee(5)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#000a20 0%,#001838 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <rect x="18" y="12" width="124" height="76" rx="6" fill="#050f20" stroke="#C9A227" stroke-width="1"/>
+          <rect x="18" y="12" width="124" height="18" rx="6" fill="#0f1c30"/>
+          <rect x="18" y="24" width="124" height="6" fill="#0f1c30"/>
+          <text x="80" y="24" text-anchor="middle" font-size="7.5" fill="#C9A227" font-family="'Bebas Neue',sans-serif" letter-spacing="1">APRIL 2025</text>
+          <text x="30" y="42" font-size="6" fill="#7a8fad">Su</text><text x="45" y="42" font-size="6" fill="#7a8fad">Mo</text><text x="60" y="42" font-size="6" fill="#7a8fad">Tu</text><text x="75" y="42" font-size="6" fill="#7a8fad">We</text><text x="90" y="42" font-size="6" fill="#7a8fad">Th</text><text x="105" y="42" font-size="6" fill="#7a8fad">Fr</text><text x="120" y="42" font-size="6" fill="#7a8fad">Sa</text>
+          <text x="30" y="55" font-size="7" fill="#b0c0d6">1</text><text x="45" y="55" font-size="7" fill="#b0c0d6">2</text>
+          <rect x="57" y="48" width="10" height="10" rx="2" fill="#ff4444" opacity=".7"/><text x="62" y="56" font-size="7" fill="#fff" text-anchor="middle">3</text>
+          <text x="75" y="55" font-size="7" fill="#b0c0d6">4</text><text x="90" y="55" font-size="7" fill="#b0c0d6">5</text>
+          <rect x="102" y="48" width="10" height="10" rx="2" fill="#ff4444" opacity=".7"/><text x="107" y="56" font-size="7" fill="#fff" text-anchor="middle">6</text>
+          <text x="120" y="55" font-size="7" fill="#b0c0d6">7</text>
+          <text x="30" y="68" font-size="7" fill="#b0c0d6">8</text>
+          <rect x="42" y="61" width="10" height="10" rx="2" fill="#4caf7d" opacity=".9"/><text x="47" y="69" font-size="7" fill="#fff" text-anchor="middle">9</text>
+          <text x="60" y="68" font-size="7" fill="#b0c0d6">10</text><text x="75" y="68" font-size="7" fill="#b0c0d6">11</text><text x="90" y="68" font-size="7" fill="#b0c0d6">12</text>
+          <text x="80" y="84" text-anchor="middle" font-size="6" fill="#4caf7d">Apr 9 is available ✓</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">Customers pick an open date for their reservation. Dates marked full are blocked in red — no double-bookings, no phone tag.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> You give me a list of blocked dates. The calendar highlights them in red. When a customer picks an open date and submits, the reservation emails you directly.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Live Demo — red = fully booked</div>
-          <div class="mini-cal" id="miniCal"></div>
-          <div id="calMsg" style="margin-top:8px;font-size:.8rem;color:var(--gray);min-height:20px;"></div>
-        </div>
-      </div>
+      <div class="rf-card-title">📅 Reservation Calendar</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">🏆</div>
-        <div>
-          <div class="rest-feature-title">Loyalty Points Tracker</div>
-          <span class="rest-feature-tag">Keep customers coming back</span>
-        </div>
+    <!-- 7. Loyalty Points -->
+    <div class="rf-card reveal" onclick="restBee(6)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#1a1000 0%,#2e1a00 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <text x="80" y="30" text-anchor="middle" font-size="18">🏆</text>
+          <text x="80" y="46" text-anchor="middle" font-size="20" fill="#C9A227" font-family="'Bebas Neue',sans-serif">340 PTS</text>
+          <rect x="20" y="52" width="120" height="10" rx="5" fill="#1e3254"/>
+          <rect x="20" y="52" width="82" height="10" rx="5" fill="#C9A227"/>
+          <text x="80" y="74" text-anchor="middle" font-size="6.5" fill="#7a8fad">0 ——————————————— 🎁 500</text>
+          <text x="80" y="86" text-anchor="middle" font-size="6.5" fill="#e8c547">Free meal unlocks at 500 pts</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">Customers see how many points they've earned. You decide the rewards — free dessert at 100 pts, free meal at 500, etc.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> Points stored per phone number. You add them via a simple admin panel after each visit. Customers check their balance on the site any time.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Live Demo</div>
-          <div style="text-align:center;padding:10px;">
-            <div class="loyalty-pts" id="loyaltyPts">340</div>
-            <div style="font-size:.75rem;color:var(--gray);margin-bottom:8px;">points earned</div>
-            <div class="loyalty-bar"><div class="loyalty-fill" id="loyaltyFill" style="width:68%;"></div></div>
-            <div style="font-size:.72rem;color:var(--gray);display:flex;justify-content:space-between;"><span>0</span><span style="color:var(--gold);">🎁 Free meal at 500 pts</span></div>
-            <button class="rest-submit-btn" style="margin-top:10px;padding:6px;" onclick="addLoyaltyPt()">+ Simulate a visit (+10 pts)</button>
-          </div>
-        </div>
-      </div>
+      <div class="rf-card-title">🏆 Loyalty Points Tracker</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">📸</div>
-        <div>
-          <div class="rest-feature-title">Fast-Loading Photo Gallery</div>
-          <span class="rest-feature-tag">Lazy loads for speed</span>
-        </div>
+    <!-- 8. Photo Gallery -->
+    <div class="rf-card reveal" onclick="restBee(7)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#0a0a0a 0%,#1a1a1a 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <rect x="12" y="10" width="44" height="38" rx="3" fill="#2a1200"/><text x="34" y="34" text-anchor="middle" font-size="18">🍔</text>
+          <rect x="60" y="10" width="44" height="38" rx="3" fill="#1a2800"/><text x="82" y="34" text-anchor="middle" font-size="18">🥗</text>
+          <rect x="108" y="10" width="44" height="38" rx="3" fill="#280018"/><text x="130" y="34" text-anchor="middle" font-size="18">🍕</text>
+          <rect x="12" y="52" width="44" height="38" rx="3" fill="#001828"/><text x="34" y="76" text-anchor="middle" font-size="18">🍜</text>
+          <rect x="60" y="52" width="44" height="38" rx="3" fill="#1a1000"/><text x="82" y="76" text-anchor="middle" font-size="18">🌮</text>
+          <rect x="108" y="52" width="44" height="38" rx="3" fill="#1a0028"/><text x="130" y="76" text-anchor="middle" font-size="18">🍰</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">A beautiful grid of your food photos. Images only load as the customer scrolls to them — the page never feels slow even with 50+ photos.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> Uses the browser's native "lazy loading" attribute — images off-screen are skipped until needed. Keeps your speed score high and Google happy.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Sample layout</div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;border-radius:6px;overflow:hidden;">
-            <div style="aspect-ratio:1;background:linear-gradient(135deg,#2a1800,#5a3300);display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🍔</div>
-            <div style="aspect-ratio:1;background:linear-gradient(135deg,#1a2800,#3a5a00);display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🥗</div>
-            <div style="aspect-ratio:1;background:linear-gradient(135deg,#280018,#5a003a);display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🍕</div>
-            <div style="aspect-ratio:1;background:linear-gradient(135deg,#002828,#005555);display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🍜</div>
-            <div style="aspect-ratio:1;background:linear-gradient(135deg,#1a1a00,#4a4a00);display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🌮</div>
-            <div style="aspect-ratio:1;background:linear-gradient(135deg,#200028,#4a0055);display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🍰</div>
-          </div>
-        </div>
-      </div>
+      <div class="rf-card-title">📸 Fast-Loading Photo Gallery</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">⏰</div>
-        <div>
-          <div class="rest-feature-title">Closing Time Countdown</div>
-          <span class="rest-feature-tag">Live countdown</span>
-        </div>
+    <!-- 9. Closing Time Countdown -->
+    <div class="rf-card reveal" onclick="restBee(8)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#10000a 0%,#220010 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <circle cx="80" cy="46" r="34" fill="#18000e" stroke="#C9A227" stroke-width="1.5"/>
+          <text x="80" y="38" text-anchor="middle" font-size="8" fill="#7a8fad">closes at 10 PM</text>
+          <text x="80" y="58" text-anchor="middle" font-size="18" fill="#C9A227" font-family="'Bebas Neue',sans-serif" letter-spacing="2">2:47:09</text>
+          <text x="80" y="70" text-anchor="middle" font-size="6.5" fill="#e8c547">hrs · min · sec</text>
+          <text x="80" y="88" text-anchor="middle" font-size="6.5" fill="#7a8fad">Live countdown · updates every second</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">Shows customers exactly how much time is left before you close. Creates urgency and stops late calls asking if you're still open.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> JavaScript compares current time to your closing hour, updates every second. You just tell me your hours, I code it once.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Live (counting down to 10 PM)</div>
-          <div class="close-countdown" id="closeCountdown"></div>
-          <div style="text-align:center;font-size:.75rem;color:var(--gray);margin-top:6px;" id="closeMsg"></div>
-        </div>
-      </div>
+      <div class="rf-card-title">⏰ Closing Time Countdown</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">📊</div>
-        <div>
-          <div class="rest-feature-title">"How Busy Are We?" Button</div>
-          <span class="rest-feature-tag">Owner flips it live</span>
-        </div>
+    <!-- 10. How Busy Are We -->
+    <div class="rf-card reveal" onclick="restBee(9)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#001000 0%,#002000 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <rect x="15" y="20" width="130" height="16" rx="8" fill="#1e3254"/>
+          <rect x="15" y="20" width="38" height="16" rx="8" fill="#4caf7d"/>
+          <text x="80" y="50" text-anchor="middle" font-size="8" fill="#4caf7d" font-weight="bold">🟢 Not Busy — Walk-ins welcome!</text>
+          <rect x="15" y="58" width="130" height="16" rx="8" fill="#1e3254"/>
+          <rect x="15" y="58" width="75" height="16" rx="8" fill="#C9A227"/>
+          <text x="80" y="82" text-anchor="middle" font-size="8" fill="#C9A227" font-weight="bold">🟡 Moderate — Short wait</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">A simple status on your site — Not Busy, Moderate, or Very Busy. Customers see it before deciding to come in. You flip it from your phone in 2 seconds.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> Status stored in a tiny free database (Firebase). You get a private link to update it — one tap changes what every visitor sees instantly.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Owner view — tap to change</div>
-          <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
-            <button class="rest-submit-btn" style="flex:1;padding:6px;font-size:.75rem;background:#4caf7d;" onclick="setBusy('quiet')">🟢 Not Busy</button>
-            <button class="rest-submit-btn" style="flex:1;padding:6px;font-size:.75rem;background:var(--gold-dark);" onclick="setBusy('moderate')">🟡 Moderate</button>
-            <button class="rest-submit-btn" style="flex:1;padding:6px;font-size:.75rem;background:#e05555;" onclick="setBusy('busy')">🔴 Very Busy</button>
-          </div>
-          <div class="busy-bar"><div class="busy-fill" id="busyFill" style="width:30%;background:#4caf7d;"></div></div>
-          <div style="font-size:.82rem;color:var(--gray-light);margin-top:6px;" id="busyLabel">🟢 Not Busy — Walk-ins welcome!</div>
-        </div>
-      </div>
+      <div class="rf-card-title">📊 "How Busy Are We?" Meter</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">🕐</div>
-        <div>
-          <div class="rest-feature-title">Auto Breakfast / Lunch / Dinner Menu</div>
-          <span class="rest-feature-tag">Switches by the hour</span>
-        </div>
+    <!-- 11. Auto Meal Period Menu -->
+    <div class="rf-card reveal" onclick="restBee(10)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#050a1a 0%,#0a1428 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <text x="30" y="42" text-anchor="middle" font-size="22">☀️</text>
+          <text x="80" y="42" text-anchor="middle" font-size="22">🌤</text>
+          <text x="130" y="42" text-anchor="middle" font-size="22">🌙</text>
+          <text x="30" y="56" text-anchor="middle" font-size="6" fill="#7a8fad">Breakfast</text>
+          <text x="80" y="56" text-anchor="middle" font-size="6" fill="#7a8fad">Lunch</text>
+          <text x="130" y="56" text-anchor="middle" font-size="6" fill="#7a8fad">Dinner</text>
+          <rect x="102" y="60" width="56" height="20" rx="4" fill="#C9A227" opacity=".2" stroke="#C9A227" stroke-width="1"/>
+          <text x="130" y="73" text-anchor="middle" font-size="6.5" fill="#C9A227">Showing now ✓</text>
+          <text x="80" y="88" text-anchor="middle" font-size="6.5" fill="#7a8fad">Switches automatically by the hour</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">Your menu automatically shows the right section based on time of day. Breakfast before noon, lunch until 4 PM, dinner after. No one sees the dinner menu at 8 AM.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> JavaScript checks the current hour and shows the matching menu section. Set the time ranges once and it handles itself forever.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Simulate a time of day</div>
-          <div style="display:flex;gap:6px;margin-bottom:10px;">
-            <button class="rest-submit-btn" style="flex:1;padding:5px;font-size:.72rem;" onclick="setMealPeriod('breakfast')">☀️ 8 AM</button>
-            <button class="rest-submit-btn" style="flex:1;padding:5px;font-size:.72rem;" onclick="setMealPeriod('lunch')">🌤 12 PM</button>
-            <button class="rest-submit-btn" style="flex:1;padding:5px;font-size:.72rem;" onclick="setMealPeriod('dinner')">🌙 6 PM</button>
-          </div>
-          <div class="special-display" id="mealDisplay">🌙 <strong>Dinner Menu</strong><br/>Grilled Salmon $24 · Ribeye $38 · Pasta Primavera $18</div>
-        </div>
-      </div>
+      <div class="rf-card-title">🕐 Auto Breakfast / Lunch / Dinner</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">⭐</div>
-        <div>
-          <div class="rest-feature-title">Rotating Customer Reviews</div>
-          <span class="rest-feature-tag">Auto-slides every 4s</span>
-        </div>
+    <!-- 12. Rotating Reviews -->
+    <div class="rf-card reveal" onclick="restBee(11)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#0a0800 0%,#1a1400 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <rect x="12" y="14" width="136" height="60" rx="6" fill="#0f0c00" stroke="#C9A227" stroke-width="1"/>
+          <text x="80" y="32" text-anchor="middle" font-size="11" fill="#C9A227">★★★★★</text>
+          <text x="80" y="46" text-anchor="middle" font-size="6.5" fill="#b0c0d6">"Best ribeye in the city. Service was</text>
+          <text x="80" y="56" text-anchor="middle" font-size="6.5" fill="#b0c0d6">absolutely top-notch. We'll be back!"</text>
+          <text x="80" y="67" text-anchor="middle" font-size="6" fill="#7a8fad">— Maria G., Google Review</text>
+          <circle cx="68" cy="84" r="4" fill="#C9A227"/>
+          <circle cx="80" cy="84" r="4" fill="#1e3254"/>
+          <circle cx="92" cy="84" r="4" fill="#1e3254"/>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">Your best Google reviews rotate automatically on your homepage — social proof that convinces new customers to try you before they walk in.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> You give me your top reviews, I build a smooth auto-rotating slideshow. Can also pull live from the Google Places API for advanced builds.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Live Demo</div>
-          <div id="reviewSlide"></div>
-          <div class="review-dots" id="reviewDots"></div>
-        </div>
-      </div>
+      <div class="rf-card-title">⭐ Rotating Customer Reviews</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">🧾</div>
-        <div>
-          <div class="rest-feature-title">Order-Ahead + Combo Suggester</div>
-          <span class="rest-feature-tag">Auto-calculates total</span>
-        </div>
+    <!-- 13. Combo Suggester -->
+    <div class="rf-card reveal" onclick="restBee(12)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#001a10 0%,#003020 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <rect x="12" y="10" width="136" height="54" rx="5" fill="#0a1a10" stroke="#1e3254" stroke-width=".8"/>
+          <text x="22" y="30" font-size="7" fill="#e8c547">🍔 Burger</text><text x="138" y="30" font-size="7" fill="#C9A227" text-anchor="end">$12.99</text>
+          <text x="22" y="44" font-size="7" fill="#e8c547">🍟 Fries</text><text x="138" y="44" font-size="7" fill="#C9A227" text-anchor="end">$3.99</text>
+          <text x="22" y="58" font-size="7" fill="#e8c547">🥤 Drink</text><text x="138" y="58" font-size="7" fill="#C9A227" text-anchor="end">$2.50</text>
+          <rect x="12" y="68" width="136" height="22" rx="5" fill="rgba(201,162,39,.12)" stroke="#C9A227" stroke-width="1"/>
+          <text x="22" y="80" font-size="6.5" fill="#C9A227">💡 Add a drink for $2.50 and save $1!</text>
+          <text x="22" y="88" font-size="6" fill="#7a8fad">Total: $19.48</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">Customers build their order and the site suggests smart combos — "Add a drink for $2 and save $1.50." Total updates live. One submit sends the full order to your email.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> Combo logic is simple if/else rules written once. "If they have a burger, suggest fries." Total recalculates after each suggestion is accepted or declined.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Live Demo — add items</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-            <button class="rest-submit-btn" style="padding:5px 10px;font-size:.75rem;" onclick="comboAdd('Burger','$12.99',12.99)">+ Burger $12.99</button>
-            <button class="rest-submit-btn" style="padding:5px 10px;font-size:.75rem;background:var(--navy-border);color:var(--white);" onclick="comboAdd('Fries','$3.99',3.99)">+ Fries $3.99</button>
-          </div>
-          <div id="comboSuggestion" style="display:none;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:6px;padding:10px;margin-bottom:8px;font-size:.8rem;">
-            💡 <span id="comboSugText"></span>
-            <div style="display:flex;gap:6px;margin-top:6px;">
-              <button class="rest-submit-btn" style="padding:4px 10px;font-size:.72rem;" onclick="acceptCombo()">Yes, add it!</button>
-              <button class="rest-submit-btn" style="padding:4px 10px;font-size:.72rem;background:var(--navy-border);color:var(--white);" onclick="declineCombo()">No thanks</button>
-            </div>
-          </div>
-          <div class="rest-cart" id="comboCart"><div class="cart-row"><span class="cart-name" style="opacity:.4;font-style:italic">Nothing added yet</span></div></div>
-        </div>
-      </div>
+      <div class="rf-card-title">🧾 Order-Ahead + Combo Suggester</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">⏳</div>
-        <div>
-          <div class="rest-feature-title">Wait Time Estimator</div>
-          <span class="rest-feature-tag">Updates with each order</span>
-        </div>
+    <!-- 14. Wait Time Estimator -->
+    <div class="rf-card reveal" onclick="restBee(13)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#100a00 0%,#201400 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <text x="80" y="20" text-anchor="middle" font-size="10" fill="#7a8fad">Estimated Wait</text>
+          <text x="80" y="56" text-anchor="middle" font-size="40" fill="#C9A227" font-family="'Bebas Neue',sans-serif">22</text>
+          <text x="80" y="70" text-anchor="middle" font-size="9" fill="#e8c547">minutes</text>
+          <text x="80" y="86" text-anchor="middle" font-size="6.5" fill="#7a8fad">Updates with each new order placed</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">Shows customers a realistic wait time before they order. Each new order adds a couple minutes, reflecting how busy you actually are right now.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> A base wait set by you. Each submitted order increments a counter. Wait = base + (orders × avg cook time). Resets every hour automatically.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Live Demo</div>
-          <div style="text-align:center;padding:10px 0;">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--gold);" id="waitTime">15</div>
-            <div style="font-size:.8rem;color:var(--gray);margin-bottom:10px;">estimated minutes</div>
-            <button class="rest-submit-btn" style="padding:6px;" onclick="addWaitOrder()">📥 New order (+3 min)</button>
-            <button class="rest-submit-btn" style="padding:6px;margin-top:4px;background:var(--navy-border);color:var(--white);" onclick="resetWait()">🔄 Reset (top of hour)</button>
-          </div>
-        </div>
-      </div>
+      <div class="rf-card-title">⏳ Wait Time Estimator</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">🖨️</div>
-        <div>
-          <div class="rest-feature-title">Printable Daily Specials Sheet</div>
-          <span class="rest-feature-tag">One-click print</span>
-        </div>
+    <!-- 15. Printable Specials Sheet -->
+    <div class="rf-card reveal" onclick="restBee(14)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#080e1a 0%,#0f1c30 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <rect x="30" y="8" width="100" height="72" rx="4" fill="#f5f5ee"/>
+          <text x="80" y="26" text-anchor="middle" font-size="8" fill="#222" font-family="'Bebas Neue',sans-serif" letter-spacing="1">TODAY'S SPECIALS</text>
+          <line x1="38" y1="30" x2="122" y2="30" stroke="#C9A227" stroke-width="1"/>
+          <text x="40" y="42" font-size="6" fill="#333">🥩 Ribeye + Soup</text><text x="120" y="42" font-size="6" fill="#333" text-anchor="end">$28</text>
+          <text x="40" y="53" font-size="6" fill="#333">🍝 Pasta 2-for-1</text><text x="120" y="53" font-size="6" fill="#333" text-anchor="end">$22</text>
+          <text x="40" y="64" font-size="6" fill="#333">🍷 House Wine ½ Price</text><text x="120" y="64" font-size="6" fill="#333" text-anchor="end">All day</text>
+          <text x="80" y="90" text-anchor="middle" font-size="7.5" fill="#C9A227">🖨️ Print Daily Specials</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">A clean, print-ready version of today's specials for the kitchen or host stand. One click prints it formatted — no extra design app needed.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> CSS @media print rules hide everything on the page except the specials sheet. Staff clicks "Print" and the browser prints only what matters.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Preview</div>
-          <div style="background:rgba(255,255,255,.05);border-radius:6px;padding:12px;font-size:.82rem;line-height:1.8;">
-            <div style="font-weight:700;color:var(--gold);margin-bottom:4px;">📋 Today's Specials — Monday</div>
-            <div>🥩 Ribeye + Soup of the Day — <strong>$28</strong></div>
-            <div>🍝 Pasta Special (2-for-1) — <strong>$22</strong></div>
-            <div>🍷 House Wine Half-Price — <strong>All day</strong></div>
-          </div>
-          <button class="print-btn" onclick="alert('In production: opens your browser Print dialog with a clean formatted specials sheet!')">🖨️ Print Today's Specials</button>
-        </div>
-      </div>
+      <div class="rf-card-title">🖨️ Printable Daily Specials Sheet</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">🚫</div>
-        <div>
-          <div class="rest-feature-title">"We're Out" Item Toggle</div>
-          <span class="rest-feature-tag">Hide items instantly</span>
-        </div>
+    <!-- 16. We're Out Toggle -->
+    <div class="rf-card reveal" onclick="restBee(15)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#1a0000 0%,#300000 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <rect x="12" y="14" width="136" height="22" rx="5" fill="#0f0000" stroke="#1e3254" stroke-width=".8"/>
+          <text x="28" y="28" font-size="8" fill="#e8c547">🥩 Ribeye Steak</text>
+          <rect x="110" y="19" width="28" height="12" rx="6" fill="#4caf7d"/>
+          <circle cx="130" cy="25" r="5" fill="white"/>
+          <text x="122" y="42" font-size="6" fill="#4caf7d" text-anchor="end">✅ Available</text>
+          <rect x="12" y="46" width="136" height="22" rx="5" fill="#0f0000" stroke="#1e3254" stroke-width=".8"/>
+          <text x="28" y="60" font-size="8" fill="#e8c547">🦞 Lobster Bisque</text>
+          <rect x="110" y="51" width="28" height="12" rx="6" fill="#333"/>
+          <circle cx="114" cy="57" r="5" fill="white" opacity=".5"/>
+          <text x="122" y="74" font-size="6" fill="#ff6b6b" text-anchor="end">❌ 86'd</text>
+          <text x="80" y="92" text-anchor="middle" font-size="6" fill="#7a8fad">Owner flips from phone · updates instantly</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">Run out of something? Flip a switch from your phone and that item disappears from the public menu immediately — no developer needed.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> You get a private owner link with toggles. Flipping one updates a database entry. The public menu hides the item for all visitors within 30 seconds.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Owner view — toggle availability</div>
-          <div class="item-toggle-row">
-            <span class="item-name">🥩 Ribeye Steak</span>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="item-avail in" id="avail-ribeye">✅ Available</span>
-              <div class="small-toggle on" onclick="toggleItem(this,'ribeye')"></div>
-            </div>
-          </div>
-          <div class="item-toggle-row">
-            <span class="item-name">🦞 Lobster Bisque</span>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="item-avail out" id="avail-bisque">❌ 86'd</span>
-              <div class="small-toggle" onclick="toggleItem(this,'bisque')"></div>
-            </div>
-          </div>
-          <div class="item-toggle-row">
-            <span class="item-name">🍰 Cheesecake</span>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="item-avail in" id="avail-cake">✅ Available</span>
-              <div class="small-toggle on" onclick="toggleItem(this,'cake')"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <div class="rf-card-title">🚫 "We're Out" Item Toggle</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">📍</div>
-        <div>
-          <div class="rest-feature-title">Location-Aware Hours</div>
-          <span class="rest-feature-tag">Open or Closed right now</span>
-        </div>
+    <!-- 17. Location-Aware Hours -->
+    <div class="rf-card reveal" onclick="restBee(16)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#001020 0%,#002040 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <circle cx="80" cy="44" r="30" fill="#061a30" stroke="#1e3254" stroke-width="1"/>
+          <text x="80" y="32" text-anchor="middle" font-size="7" fill="#7a8fad">your local time</text>
+          <text x="80" y="50" text-anchor="middle" font-size="16" fill="#4caf7d" font-family="'Bebas Neue',sans-serif">OPEN NOW</text>
+          <text x="80" y="62" text-anchor="middle" font-size="6.5" fill="#7a8fad">Tue 11:00 AM – 9:00 PM</text>
+          <text x="80" y="84" text-anchor="middle" font-size="6.5" fill="#7a8fad">Switches to 🔴 Closed automatically</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">Your site detects whether you're open right now and shows a green Open or red Closed badge automatically. Never needs a manual update.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> JavaScript reads the visitor's local time and compares it to your schedule. If it's Tuesday 2 PM and you're open Tue 11–9, it shows "Open." Runs itself forever.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Based on your actual clock right now</div>
-          <div id="hoursDisplay" style="font-size:.85rem;line-height:1.9;"></div>
-        </div>
-      </div>
+      <div class="rf-card-title">📍 Location-Aware Hours</div>
     </div>
 
-    <div class="rest-feature-card reveal">
-      <div class="rest-feature-header">
-        <div class="rest-feature-icon">📆</div>
-        <div>
-          <div class="rest-feature-title">One-Click Add to Calendar</div>
-          <span class="rest-feature-tag">For reservations</span>
-        </div>
+    <!-- 18. Add to Calendar -->
+    <div class="rf-card reveal" onclick="restBee(17)">
+      <div class="rf-card-img" style="background:linear-gradient(135deg,#000a20 0%,#001838 100%);">
+        <svg viewBox="0 0 160 100" width="160" height="100">
+          <rect x="25" y="12" width="110" height="58" rx="6" fill="#071428" stroke="#C9A227" stroke-width="1"/>
+          <rect x="25" y="12" width="110" height="18" rx="6" fill="#C9A227"/>
+          <rect x="25" y="24" width="110" height="6" fill="#C9A227"/>
+          <text x="80" y="24" text-anchor="middle" font-size="7.5" fill="#0a1a2e" font-weight="bold" font-family="'Bebas Neue',sans-serif">MAY 10 · 7:00 PM</text>
+          <text x="80" y="44" text-anchor="middle" font-size="7.5" fill="#e8c547">✅ Reservation Confirmed!</text>
+          <text x="80" y="56" text-anchor="middle" font-size="6.5" fill="#7a8fad">Party of 4 · La Piazza</text>
+          <rect x="35" y="78" width="90" height="14" rx="4" fill="#C9A227"/>
+          <text x="80" y="88" text-anchor="middle" font-size="7" fill="#071428" font-weight="bold">📆 Add to My Calendar</text>
+        </svg>
       </div>
-      <div class="rest-feature-body">
-        <div class="rest-feature-explain">After a customer makes a reservation, one button adds it to their Google, Apple, or Outlook calendar — pre-filled with date, time, restaurant name, and address.</div>
-        <div class="rest-feature-how"><strong>How it works:</strong> A specially formatted .ics link opens the user's default calendar app with the event pre-filled. Works on every device and every calendar app.</div>
-        <div class="rest-demo">
-          <div class="rest-demo-label">▶ Demo</div>
-          <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:12px;font-size:.83rem;margin-bottom:8px;line-height:1.6;">
-            <div style="color:var(--gold);font-weight:700;">✅ Reservation Confirmed!</div>
-            <div style="color:var(--gray-light);">Saturday, May 10 · 7:00 PM · Party of 4</div>
-          </div>
-          <button class="rest-submit-btn" onclick="alert('In production: generates an .ics file that opens your calendar app with the reservation pre-filled!')">📆 Add to My Calendar</button>
-        </div>
-      </div>
+      <div class="rf-card-title">📆 One-Click Add to Calendar</div>
     </div>
 
-  </div><!-- /rest-features-grid -->
-  <div style="margin-top:60px;text-align:center;">
+  </div><!-- /rf-grid -->
+
+  <div style="margin-top:56px;text-align:center;">
     <p style="color:var(--gray);margin-bottom:16px;">Want any of these on your restaurant website?</p>
     <a href="#" class="btn-primary" onclick="switchTab('quote');return false;">Get A Quote →</a>
   </div>
 </section>
 </div><!-- /tab-restaurant -->
-
 <!-- TAB: HOW IT WORKS + GUARANTEE -->
 <div class="tab-panel" id="tab-process">
 <section id="process">
@@ -2549,7 +3262,16 @@
 <!-- ============================================================
      FLOATING BEE
 ============================================================ -->
-<svg id="floating-bee" viewBox="0 0 80 80" fill="none" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})" title="Get a quote">
+<!-- ============================================================
+     FIXED BEE WIDGET (speech bubble + mascot)
+============================================================ -->
+<div id="bee-widget">
+  <div id="bee-speech">
+    <button id="bee-speech-close" onclick="closeBeeSpeech()" title="Dismiss">✕</button>
+    <div id="bee-speech-title"></div>
+    <div id="bee-speech-text"></div>
+  </div>
+  <svg id="floating-bee" viewBox="0 0 80 80" fill="none" onclick="onFloatingBeeClick()" title="Ask the bee!">
   <defs>
     <radialGradient id="fbBodyGrad" cx="40%" cy="35%" r="60%">
       <stop offset="0%" stop-color="#E8C547"/>
@@ -2590,6 +3312,7 @@
   <circle cx="26.2" cy="5.2" r="0.9" fill="rgba(255,255,255,0.7)"/>
   <circle cx="52.2" cy="5.2" r="0.9" fill="rgba(255,255,255,0.7)"/>
 </svg>
+</div><!-- /#bee-widget -->
 
 <!-- ============================================================
      PRIVACY MODAL
@@ -2657,7 +3380,7 @@
   window.addEventListener('load', () => {
     setTimeout(() => {
       document.getElementById('loader').classList.add('hidden');
-    }, 3600);
+    }, 5000);
   });
 
   // ---- NAV ----
@@ -3437,6 +4160,138 @@
         + Object.entries(schedule).map(([d,[o,c]]) => '<span style="color:var(--gray-light);' + (d===dayKey?'font-weight:700':'opacity:.6') + '">' + d + ': ' + fmt(o) + ' – ' + fmt(c) + '</span>').join('<br/>');
     }
   } // end initRestaurantDemos
+
+  // ══════════════════════════════════════════════════════════════
+  //  RESTAURANT CARD BEE SPEECH SYSTEM
+  // ══════════════════════════════════════════════════════════════
+
+  const restBeeData = [
+    {
+      title: "📞 Order Form + Phone Confirm",
+      text: "This is one of the simplest and most powerful features we build for restaurants. Here's how it works: a customer visits your site, fills in their name, phone number, and what they want to order — picking from your actual menu items — and then hits submit. That order gets emailed directly to you through a free service called Formspree. The email lands in your inbox looking something like: 'John D. wants a Classic Burger with no onions and a side of fries. His number is (555) 123-4567.' You see it, you call him back in five minutes, confirm the order, give him a total, and take payment over the phone — no Stripe account, no payment processor, no percentage taken out. This is perfect for restaurants that already take phone orders and just want a cleaner way to receive them. Your customer gets to browse at their own pace and submit without being rushed. You get a clear, organized email every single time. No paper, no mishearing someone on a noisy line. It also means you can take orders while you're busy — the form handles the intake, you handle the follow-up when you have a free second. We set this up with Formspree's free tier which handles hundreds of submissions per month at zero cost to you."
+    },
+    {
+      title: "💰 Live Price Menu",
+      text: "Imagine a menu where every time a customer clicks an item, the running total at the bottom updates instantly — no refresh, no waiting, no confusion. That's exactly what this feature does. Each menu item has a price attached to it in the code. When a customer clicks 'Add,' the price gets added to a running total displayed prominently at the bottom of the page. Click it again to remove it — the total drops back down. This matters because price transparency builds trust. When customers know exactly what they're spending before they pick up the phone or hit submit, they order with confidence and there are no awkward moments when they call. It also tends to increase average order size — when people can see the total and it's lower than they expected, they'll often add another item. This feature requires zero server, zero database, zero monthly cost. It's pure JavaScript math running entirely in the visitor's browser. Every item you sell gets assigned a price in the code once, and the math handles itself forever. We can also add categories, filters, and dietary labels on top of this so customers can browse by type — appetizers, mains, desserts — and the price tracker follows along no matter which section they're in."
+    },
+    {
+      title: "🛒 Browser Cart",
+      text: "The browser cart takes the live price menu one step further. Instead of just showing a running total, it builds an actual cart — a list of everything the customer has added, displayed item by item with individual prices and a final total. Here's the powerful part: the cart is stored in the browser's localStorage. That means if the customer closes the tab, goes to a different page on your site, or even closes their laptop and comes back an hour later, their cart is still there waiting for them. Nothing was lost. When they're ready, they hit submit and a single clean email goes to your inbox with every item listed, quantities, any special notes they added, their name, and their phone number. You call to confirm, take payment, done. This is especially useful for customers who like to browse slowly, compare options, go check the fridge, and come back. It removes all the friction from the ordering experience. We also add a quantity selector so they can say '2x Burger' instead of having to add the same item twice. And we include a 'Clear Cart' option so they can start over if they change their mind. The whole thing works on every device — phone, tablet, laptop — and requires no backend server to maintain."
+    },
+    {
+      title: "🌙 Dark Mode Toggle",
+      text: "Dark mode isn't just a trendy design feature — for restaurant websites, it's genuinely practical. Think about where your customers are when they're browsing your menu: they might be sitting at a dim table, lying in bed late at night, or in a car with the screen brightness turned down. A bright white menu page in a dark environment is uncomfortable and drives people away faster. With a dark mode toggle, visitors can flip the entire site from a light theme to a dark one with a single click. The toggle is usually placed in the navigation bar or the top corner of the page, and when they flip it, every background, card, and text color smoothly transitions to a dark palette that's easy on the eyes. The browser then saves their preference in localStorage — so the next time they visit, the site remembers which mode they like and loads that way automatically. No re-clicking needed. From a brand perspective, dark mode often makes food photography pop even more dramatically. Gold text on a dark background, rich food photos in the dimmed layout — it can feel very upscale and intentional. We implement this with a simple CSS class toggle and a smooth transition so it doesn't feel jarring. The whole system is built once and runs forever with no maintenance required from you."
+    },
+    {
+      title: "🌟 Today's Specials (Auto by Day)",
+      text: "This feature is a genuine time-saver that keeps your website feeling fresh and current without you ever logging in to update it. Here's how it works: during setup, you give us your specials for each day of the week — Monday's lunch special, Tuesday's pasta deal, Wednesday's wing night, and so on. We code those into the site one time. From that point forward, the website checks what day of the week it is every time someone visits, and automatically displays the correct special for that day. If it's Tuesday, they see the Tuesday special. If it's Friday, they see the Friday special. No one needs to touch anything. The specials display in a highlighted, visually distinct section of the page — usually near the top of the menu or on the homepage — so it's the first thing customers see. You can include a photo, a price, a description, and even a 'limited time' urgency message. If your specials rotate seasonally rather than weekly, we can also build a version that changes monthly or based on date ranges. This makes your site feel like it's being actively managed even when you haven't touched it in months, and it gives customers a reason to check back regularly because they know something new might be there."
+    },
+    {
+      title: "📅 Reservation Calendar",
+      text: "Phone tag for reservations is one of the most frustrating parts of running a restaurant — for both you and your customers. This feature replaces all of that with a clean, interactive calendar embedded directly on your website. Customers see the current month laid out in a grid. Dates you've marked as fully booked are highlighted in red and cannot be selected. Open dates are clickable, and when a customer selects one, they fill out a short form: their name, phone number, party size, and preferred time. When they submit, you get a reservation email instantly. No phone call required. On the back end, you send us your blocked dates — weekends that are fully booked, holidays you're closed, private events — and we update the calendar. It takes less than two minutes to send a quick text or email and have the calendar updated within the hour. For busier restaurants, we can connect this to a lightweight database so you can manage blocked dates yourself through a simple private admin link — no coding required on your end. The calendar works perfectly on mobile, which is where most reservations are made. Customers can even jump to the next month if they're planning ahead. This feature alone can save you dozens of phone calls every week and dramatically reduce no-shows since customers who book online tend to be more committed."
+    },
+    {
+      title: "🏆 Loyalty Points Tracker",
+      text: "Customer loyalty programs are proven to increase repeat visits — but most small restaurants can't afford the expensive POS systems that have them built in. This feature brings that same concept to your website for free. Here's how it works: every customer gets a loyalty balance tied to their phone number. Each time they visit and spend money, you add points to their account through a simple private admin panel — something as easy as entering their number and clicking 'Add 10 points.' On your website, there's a public-facing points checker where customers type in their phone number and instantly see their balance, displayed as a big number with a progress bar showing how close they are to the next reward. You decide the reward structure: free dessert at 100 points, free entrée at 300, a 20% discount at 500. The thresholds are entirely up to you. When a customer hits a milestone, the page celebrates with a visual reward — a gold badge, a special message, whatever fits your brand. This gives customers a tangible reason to come back instead of trying a competitor, and it creates a sense of progress and achievement that's genuinely fun. We can also add a 'birthday bonus' field so customers who register get double points in their birthday month, which is a powerful retention tool. The whole system can be as simple or as sophisticated as you want."
+    },
+    {
+      title: "📸 Fast-Loading Photo Gallery",
+      text: "Food photography is one of the most powerful marketing tools a restaurant has, and a well-built gallery on your website can be the difference between someone choosing you or scrolling past. This feature is a full photo grid — your best dishes, your dining room, your staff, your specials — displayed in a beautiful, professional layout that works on every screen size. The key technical detail that makes this worth building properly is lazy loading. Most restaurant websites make the mistake of loading all their photos at once when the page opens. With 30 or 40 high-quality food photos, that means the page takes ten or fifteen seconds to fully load — and research consistently shows that visitors abandon pages that take more than three seconds. Lazy loading solves this by only loading images as the customer scrolls down to them. The images above the fold load instantly, and everything below loads just-in-time as they scroll. The page feels fast from the very first second, even with 50 or 100 photos in the gallery. We also compress and optimize every image so they look sharp without being unnecessarily large files. The gallery layout itself is a responsive grid that rearranges elegantly on phones — three columns on desktop, two on tablet, one or two on mobile. We can also add lightbox functionality so customers can tap any photo to see a full-screen version. Good food photography in a well-built gallery is an investment that pays for itself every day."
+    },
+    {
+      title: "⏰ Closing Time Countdown",
+      text: "This is a small feature with a surprisingly big psychological impact. Most restaurants get a flood of late calls from customers asking 'Are you still open?' — calls that interrupt service, frustrate staff, and often come in after you've already started closing down. The closing time countdown eliminates most of those calls by putting the answer right on your website in the most compelling way possible: a live, ticking countdown clock. Every visitor to your site sees exactly how many hours, minutes, and seconds are left before you close. The counter updates every single second in real time. When there's more than two hours left, it displays normally. When you're under an hour from closing, it automatically switches to a warning color — amber or red — with a message like 'Less than 1 hour left — order soon!' This creates genuine urgency that motivates customers to stop browsing and actually place their order or make their reservation now rather than putting it off. From a technical standpoint, this requires zero maintenance from you. You give us your closing time for each day of the week during setup. The JavaScript reads the visitor's local clock, calculates the gap to your next closing time, and counts down automatically. It resets at midnight and starts counting toward the next day's close. No server required, no database, no monthly cost. It just runs, every day, forever."
+    },
+    {
+      title: "📊 \"How Busy Are We?\" Meter",
+      text: "One of the most common questions restaurants field — by phone, by walk-in, and by customers just deciding whether to bother coming — is 'how busy is it right now?' This feature answers that question on your website so you don't have to. It's a simple three-state status indicator that you control from your phone: Not Busy, Moderate, or Very Busy. Each state shows a colored bar, an icon, and a short message that your customers see in real time. 'Not Busy — Walk-ins welcome!' shows in green. 'Moderate — Short wait possible' shows in amber. 'Very Busy — 30+ minute wait' shows in red. Updating it takes about two seconds: you open your private owner link, tap a button, done. Every person on your website at that moment sees the new status within seconds. For the customer, this is genuinely useful information that helps them plan. If they see 'Not Busy,' they might head over right now. If they see 'Very Busy,' they might decide to call ahead or come back in an hour. Either way, they're making a more informed decision, which means they arrive with the right expectations and you deal with fewer frustrated walk-ins. We store the status in a free real-time database called Firebase, which means the update is instant for every visitor anywhere in the world the moment you flip it. The owner control panel is a single bookmarked page on your phone — no app download required."
+    },
+    {
+      title: "🕐 Auto Breakfast / Lunch / Dinner Menu",
+      text: "If your restaurant serves different menus at different times of day — a breakfast menu in the morning, a lunch menu midday, and a dinner menu in the evening — this feature handles the switching automatically so your customers always see the right one. Here's the problem it solves: most restaurant websites show everything all the time. A customer visits at 8 AM looking for breakfast options and has to scroll past the entire dinner menu to find what they want. It's frustrating and looks disorganized. With this feature, the website detects the current time and shows only the appropriate menu section. Before noon, visitors see the breakfast menu. Between noon and 4 PM, they see the lunch menu. After 4 PM, they see the dinner menu. The transitions happen automatically — you set the hours once during setup and never think about it again. We also add a small note like 'Showing: Dinner Menu — Changes to Breakfast at 7 AM' so customers know what they're seeing and when it switches. For restaurants with a happy hour menu, we can add that as a fourth state that appears between specific hours. The menus themselves look beautiful — we format each one with categories, descriptions, and prices in a clean layout. This feature requires no server logic at all. It's pure JavaScript reading the browser's clock and toggling which section of the page is visible. Zero hosting cost, zero maintenance, runs forever."
+    },
+    {
+      title: "⭐ Rotating Customer Reviews",
+      text: "Social proof is one of the most powerful drivers of new customer decisions, and real reviews from real customers are far more convincing than anything you could write yourself. This feature takes your best Google, Yelp, or Facebook reviews and displays them in a beautiful, automatically rotating slideshow on your homepage or menu page. Each slide shows the reviewer's star rating — always five stars, because you pick which reviews to feature — their full quote, their name, and where they left the review. The slideshow advances automatically every four seconds, looping through all your featured reviews without any clicking required. Visitors also see small dots at the bottom they can tap to jump directly to any specific review. The result is that every person who lands on your page is immediately exposed to enthusiastic, genuine praise from your real customers — before they even scroll down. This builds credibility and trust in the first ten seconds of their visit, which is when most people are still deciding whether to keep reading or go back. For restaurants with a lot of Google reviews, we can also implement a version that pulls from the Google Places API automatically — meaning new five-star reviews you receive get added to the rotation without you having to do anything. That version requires a Google API key but the setup is simple and the API calls are free up to a generous daily limit."
+    },
+    {
+      title: "🧾 Order-Ahead + Combo Suggester",
+      text: "This feature combines two things that work beautifully together: a proper order-ahead system with a smart combo suggestion engine. Here's how the ordering side works: customers browse your menu, add items to a cart, and when they're ready, they submit their full order — name, phone, everything they want — in a single form submission that arrives in your email inbox. Clean, organized, ready to act on. The combo suggester is the clever part. As customers add items, the site watches what's in their cart and makes intelligent recommendations. For example: if they add a burger and don't have fries, a small banner appears: 'Add Fries for just $3.99 — classic combo!' The customer can accept with one click, adding the item and updating the total, or dismiss it. If they accept the fries but still don't have a drink, a new suggestion appears: 'Add a Drink for $2.50 and make it a full meal.' The suggestions are written by you — you decide which items pair together and what the upsell language says. This is exactly how fast-food apps like McDonald's and Chick-fil-A work, and it consistently increases average order value by 15–25%. The logic is simple if-then rules: if cart contains burger and not fries, suggest fries. You give us your combos and we build the rules. Once built, it runs automatically on every order, every day, without you thinking about it."
+    },
+    {
+      title: "⏳ Wait Time Estimator",
+      text: "Nothing frustrates a customer more than ordering food and having no idea when it's going to arrive or be ready. The wait time estimator solves this by showing customers a realistic, live-updated estimate right on your website before they even place their order. Here's how it works: you give us a base wait time — maybe 15 minutes when things are slow. Every time a new order comes in through your website, the counter increments by a set number of minutes — say, 3 minutes per order. So if five orders come in quickly, the displayed wait climbs to 30 minutes, signaling to the next customer that things are busy right now and they should expect a longer wait. The counter resets automatically every hour so it doesn't keep climbing forever. You can also reset it manually at any time through your private owner panel — useful after a big rush clears out. This feature does two important things at once. First, it sets realistic expectations so customers aren't calling 10 minutes after ordering to ask where their food is. Second, it creates visible urgency during slower periods — a short wait time displayed prominently encourages customers who are on the fence to go ahead and order now. The entire system runs in the browser with a small backend database to sync the counter across visitors. Multiple people looking at your site at the same time will all see the same live number, updated in real time."
+    },
+    {
+      title: "🖨️ Printable Daily Specials Sheet",
+      text: "This is a deceptively simple feature that saves your kitchen and front-of-house staff real time every single day. Here's the scenario: your manager comes in each morning, opens your website, clicks 'Print Today's Specials,' and in thirty seconds has a clean, professionally formatted page coming out of the printer — ready to hand to every server as their cheat sheet for the day's specials, or to display at the host stand, or to tape to the back of the kitchen printer. No formatting in Word, no copying from a text message, no writing on a whiteboard that gets erased. The printed page shows only what matters: today's date, the day of the week, each special with a description and price, and your restaurant's name at the top. Everything else on the website — navigation, photos, menus, contact info — disappears from the print version using CSS print rules that hide non-essential elements. The result is a clean, print-only layout that's designed specifically to look good on paper. If you use the 'Today's Specials by Day' feature we offer, the sheet always shows the correct specials automatically — the right page always prints the right content without anyone having to select or change anything. Staff just bookmark the page, click Print, and they're done. It's a tiny detail, but over the course of a year it saves dozens of hours of manual formatting and miscommunication."
+    },
+    {
+      title: "🚫 \"We're Out\" Item Toggle",
+      text: "86ing an item in a restaurant is a normal part of the job — you run out of the salmon, the lobster bisque didn't turn out right, the delivery was short. The problem is that your website still shows those items as available, and customers who ordered based on what they saw online are now disappointed when you call to say you don't have it. This feature solves that in real time. You get a private owner panel — a simple page bookmarked on your phone — with a toggle switch next to every item on your menu. When you run out of something, you flip the toggle. Within about 30 seconds, that item is visually grayed out on the public menu with a red 'Currently Unavailable' label. Customers can see it, but they can't select it and it won't be added to their order. When you restock, flip the toggle again and it's back, instantly, for all visitors. The status is stored in a lightweight real-time database so the change propagates to every visitor everywhere the moment you make it. No page refresh required on their end. On the customer side, this creates a dramatically better experience — they're never disappointed by ordering something that doesn't exist. On your side, it eliminates a whole category of awkward follow-up calls where you have to explain why their order is wrong. Over the course of a week, this feature alone can save you fifteen or twenty uncomfortable conversations and build real trust with customers who learn that your online menu is always accurate."
+    },
+    {
+      title: "📍 Location-Aware Hours",
+      text: "This feature automatically tells every visitor whether your restaurant is open or closed right now — without you ever manually updating anything. Here's how it works: during setup, you give us your hours for each day of the week. Monday 11 AM to 10 PM, Friday 10 AM to midnight, whatever your actual schedule is. We code those into the site. From that point forward, every time someone visits your website, JavaScript reads their device's local clock, looks up what day it is, compares the current time to your schedule for that day, and instantly displays either a green 'Open Now' badge or a red 'Closed' badge at the top of the page. Below the badge, it shows today's specific hours — 'Tuesday: 11:00 AM – 9:00 PM' — so they know exactly what the window is. There's also a collapsible full weekly schedule showing all seven days so they can plan ahead. This matters more than you might think. A huge percentage of restaurant website visitors are trying to answer one specific question: 'Can I eat there right now?' Getting that answer in two seconds, without having to scroll or search, is the difference between them choosing you or moving on. And unlike a manually updated banner or a Facebook post, this system is never wrong. It always reflects your actual hours because it's running the same logic every time, forever. If your hours change seasonally, we simply update the code and it's correct again from that moment forward."
+    },
+    {
+      title: "📆 One-Click Add to Calendar",
+      text: "This feature is the finishing touch on your reservation flow, and it makes your restaurant feel significantly more professional and organized. Here's how it works: after a customer makes a reservation through your website and gets their confirmation, they see a button that says 'Add to My Calendar.' When they click it, their phone or computer automatically opens their default calendar app — Google Calendar, Apple Calendar, Outlook, whatever they use — with the reservation pre-filled and ready to save. The event includes your restaurant's name as the event title, the date and time of the reservation, the number of people in the party, your restaurant's address so they get directions automatically, and any notes you want to include like 'Please arrive 5 minutes early' or 'Let the host know you have a reservation.' One tap to save, and it's on their calendar with a reminder already set. This dramatically reduces no-shows. When a reservation is on someone's calendar with a reminder that pops up an hour before, they remember to come. When it's not, life gets in the way. The technical side uses a standard file format called .ics which is supported by every calendar application on every platform with no special software required. It works identically on iPhone, Android, Mac, and Windows. The link is generated dynamically for each reservation with the correct date and details, so every confirmation produces a unique, accurate calendar event. It's one of those features that customers genuinely notice and appreciate."
+    }
+  ];
+
+  // Show bee speech when a restaurant card is clicked
+  window.restBee = function(idx) {
+    const data = restBeeData[idx];
+    if (!data) return;
+
+    // Update active card highlight
+    document.querySelectorAll('.rf-card').forEach((c, i) => {
+      c.classList.toggle('active', i === idx);
+    });
+
+    // Populate speech bubble
+    document.getElementById('bee-speech-title').textContent = data.title;
+    document.getElementById('bee-speech-text').textContent  = data.text;
+
+    // Show it
+    const speech = document.getElementById('bee-speech');
+    speech.classList.remove('visible');
+    // Force reflow so animation re-fires
+    void speech.offsetWidth;
+    speech.classList.add('visible');
+
+    // Scroll bee into view on mobile
+    document.getElementById('bee-widget').scrollIntoView({ behavior: 'smooth', block: 'end' });
+  };
+
+  window.closeBeeSpeech = function() {
+    document.getElementById('bee-speech').classList.remove('visible');
+    document.querySelectorAll('.rf-card').forEach(c => c.classList.remove('active'));
+  };
+
+  // Clicking the floating bee when NOT on restaurant tab scrolls to contact;
+  // when ON the restaurant tab and speech is open it dismisses it.
+  window.onFloatingBeeClick = function() {
+    const speech = document.getElementById('bee-speech');
+    const onRestTab = document.getElementById('tab-restaurant').classList.contains('active');
+    if (onRestTab && speech.classList.contains('visible')) {
+      closeBeeSpeech();
+    } else {
+      document.getElementById('tab-quote') &&
+        switchTab('quote') ||
+        document.getElementById('contact').scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // Close speech bubble if user clicks anywhere outside the widget or cards
+  document.addEventListener('click', function(e) {
+    const speech = document.getElementById('bee-speech');
+    if (!speech.classList.contains('visible')) return;
+    const insideWidget = document.getElementById('bee-widget').contains(e.target);
+    const insideCard   = e.target.closest('.rf-card');
+    if (!insideWidget && !insideCard) closeBeeSpeech();
+  });
 
 </script>
 </body>
